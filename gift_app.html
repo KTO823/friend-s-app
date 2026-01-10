@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神奇好友禮物與代購管理 App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tab-active { color: #4f46e5; }
+        .glass-morphism { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .custom-shadow { box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.2); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-900">
+
+    <!-- 設定提醒 (僅當 Key 為空時顯示) -->
+    <div id="setup-warning" class="hidden fixed inset-0 z-[100] bg-slate-900/90 flex flex-col items-center justify-center p-8 text-center text-white">
+        <i data-lucide="alert-triangle" class="w-16 h-16 text-yellow-400 mb-4"></i>
+        <h2 class="text-2xl font-bold mb-2">尚未串接資料庫</h2>
+        <p class="text-slate-400 mb-6">請在程式碼中填入你的 Supabase URL 與 Anon Key 才能使用真實資料存取功能。</p>
+        <div class="flex flex-col w-full gap-3">
+            <button onclick="enterDemoMode()" class="w-full py-4 bg-indigo-600 rounded-xl font-bold">進入試用模式 (看介面)</button>
+            <p class="text-xs text-slate-500">提示：填寫完成後此畫面會自動消失</p>
+        </div>
+    </div>
+
+    <!-- 登入頁面 -->
+    <div id="login-screen" class="hidden flex flex-col items-center justify-center min-h-screen p-6">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
+            <div class="flex justify-center mb-6">
+                <div class="p-4 bg-indigo-100 rounded-full text-indigo-600">
+                    <i data-lucide="gift" class="w-10 h-10"></i>
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold text-center mb-2">神奇好友禮物 App</h1>
+            <p class="text-slate-500 text-center mb-8">管理送禮任務與代購分帳</p>
+            <form id="login-form" class="space-y-4">
+                <input type="email" id="email" placeholder="電子郵件" required
+                    class="w-full p-4 bg-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                <input type="password" id="password" placeholder="密碼" required
+                    class="w-full p-4 bg-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition active:scale-95">
+                    登入
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主程式介面 -->
+    <div id="main-app" class="hidden max-w-md mx-auto min-h-screen flex flex-col">
+        <header class="p-6 bg-white/80 backdrop-blur-md sticky top-0 z-10 flex justify-between items-center border-b border-slate-100">
+            <div>
+                <h1 class="text-xl font-black text-indigo-600 tracking-tight italic uppercase">Gift Tracker</h1>
+                <p id="demo-badge" class="hidden text-[10px] font-bold text-amber-600 bg-amber-50 px-2 rounded-full inline-block">試用模式</p>
+            </div>
+            <button onclick="handleLogout()" class="p-2 bg-slate-50 rounded-full text-slate-400 hover:text-rose-600 transition">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <main id="content" class="p-6 flex-1 pb-32">
+            <!-- 注入內容 -->
+        </main>
+
+        <!-- 底部導覽列 -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-morphism border-t border-slate-100 px-6 pt-4 pb-8 flex justify-between items-center z-20 safe-bottom">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 transition-all">
+                <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">總覽</span>
+            </button>
+            <button onclick="switchTab('gifts')" id="nav-gifts" class="flex flex-col items-center gap-1 transition-all">
+                <i data-lucide="gift" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">禮物</span>
+            </button>
+            <div class="relative -top-10">
+                <button onclick="openAddModal()" class="bg-indigo-600 text-white p-5 rounded-full shadow-xl shadow-indigo-200 hover:scale-110 active:scale-90 transition ring-8 ring-slate-50">
+                    <i data-lucide="plus" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <button onclick="switchTab('debts')" id="nav-debts" class="flex flex-col items-center gap-1 transition-all">
+                <i data-lucide="wallet" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">債務</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 transition-all">
+                <i data-lucide="settings" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold">設定</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 新增任務彈窗 -->
+    <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-8 animate-in slide-in-from-bottom duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">新增紀錄</h2>
+                <button onclick="closeModal()" class="p-2 bg-slate-100 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            
+            <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
+                <button onclick="setModalType('gift')" id="btn-type-gift" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm text-indigo-600">指定送禮</button>
+                <button onclick="setModalType('debt')" id="btn-type-debt" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500">代購現金</button>
+            </div>
+
+            <form id="add-form" class="space-y-4">
+                <!-- 動態表單內容 -->
+                <div id="form-fields" class="space-y-4"></div>
+                <button type="button" onclick="handleSubmit()" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl mt-4 shadow-lg active:scale-95 transition">確認新增</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 訊息提示 -->
+    <div id="toast" class="fixed bottom-32 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full text-xs font-bold shadow-2xl opacity-0 transition-all pointer-events-none z-50">
+    </div>
+
+    <script>
+        // Supabase 設定 (請在此填入)
+        const supabaseUrl = ''; 
+        const supabaseKey = '';
+        
+        let supabaseClient = null;
+        let isDemoMode = false;
+        let currentUser = null;
+        let activeTab = 'dashboard';
+        let modalType = 'gift';
+
+        // 模擬資料 (供預覽使用)
+        let mockProfiles = [
+            { id: '1', username: '朋友 A' },
+            { id: '2', username: '朋友 B' },
+            { id: 'me', username: '我' }
+        ];
+        let mockGifts = [
+            { id: 'g1', item_name: '機械鍵盤', estimated_price: 3200, assignee_id: '1', creator_id: 'me', status: 'buying', is_surprise: true, created_at: new Date().toISOString() },
+            { id: 'g2', item_name: '樂高人偶組', estimated_price: 1200, assignee_id: 'me', creator_id: '2', status: 'delivered', is_surprise: false, created_at: '2025-12-25' }
+        ];
+        let mockDebts = [
+            { id: 'd1', description: '代購鋼彈模型', amount: 1500, payer_id: '1', debtor_id: 'me', is_settled: false, image_url: null, created_at: new Date().toISOString() }
+        ];
+
+        // 初始化
+        window.onload = async () => {
+            lucide.createIcons();
+            
+            if (!supabaseUrl || !supabaseKey) {
+                document.getElementById('setup-warning').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    currentUser = session.user;
+                    showApp();
+                } else {
+                    showLogin();
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('setup-warning').classList.remove('hidden');
+            }
+        };
+
+        function enterDemoMode() {
+            isDemoMode = true;
+            currentUser = { id: 'me', email: 'demo@example.com' };
+            document.getElementById('setup-warning').classList.add('hidden');
+            document.getElementById('demo-badge').classList.remove('hidden');
+            showApp();
+        }
+
+        function showLogin() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('main-app').classList.add('hidden');
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            renderContent();
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            const navs = ['dashboard', 'gifts', 'debts', 'settings'];
+            navs.forEach(n => {
+                const el = document.getElementById(`nav-${n}`);
+                if (n === tab) el.classList.add('text-indigo-600', 'scale-110');
+                else el.classList.remove('text-indigo-600', 'scale-110');
+            });
+            renderContent();
+        }
+
+        function renderContent() {
+            const container = document.getElementById('content');
+            let html = '';
+
+            if (activeTab === 'dashboard') {
+                const sentVal = mockGifts.filter(g => g.assignee_id === 'me' && g.status === 'delivered').reduce((a, b) => a + b.estimated_price, 0);
+                const recvVal = mockGifts.filter(g => g.creator_id === 'me' && g.status === 'delivered').reduce((a, b) => a + b.estimated_price, 0);
+                const balance = sentVal - recvVal;
+
+                html = `
+                    <div class="space-y-6">
+                        <div class="bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-[2rem] text-white shadow-xl custom-shadow">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="opacity-80 text-xs font-bold tracking-widest uppercase">價值平衡淨額</p>
+                                    <h2 class="text-4xl font-black mt-1">${balance >= 0 ? '+' : ''}${balance}</h2>
+                                </div>
+                                <div class="p-3 bg-white/10 rounded-2xl"><i data-lucide="trending-up" class="w-6 h-6"></i></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-6 border-t border-white/10 pt-6">
+                                <div>
+                                    <p class="text-[10px] opacity-60 font-bold uppercase">累計送出價值</p>
+                                    <p class="text-xl font-bold">$${sentVal}</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] opacity-60 font-bold uppercase">累計收到價值</p>
+                                    <p class="text-xl font-bold">$${recvVal}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <section>
+                            <h3 class="text-sm font-black text-slate-400 mb-4 tracking-widest uppercase">代購現金結算</h3>
+                            <div class="space-y-3">
+                                ${renderBalances()}
+                            </div>
+                        </section>
+                    </div>
+                `;
+            } else if (activeTab === 'gifts') {
+                html = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end mb-2">
+                            <h2 class="text-2xl font-black text-slate-800">送禮任務</h2>
+                            <span class="text-xs font-bold text-slate-400">${mockGifts.length} 個項目</span>
+                        </div>
+                        ${mockGifts.map(g => renderGiftCard(g)).join('')}
+                    </div>
+                `;
+            } else if (activeTab === 'debts') {
+                html = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end mb-2">
+                            <h2 class="text-2xl font-black text-slate-800">代購明細</h2>
+                            <span class="text-xs font-bold text-slate-400">${mockDebts.length} 筆紀錄</span>
+                        </div>
+                        ${mockDebts.map(d => renderDebtCard(d)).join('')}
+                    </div>
+                `;
+            } else if (activeTab === 'settings') {
+                html = `
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-black text-slate-800">設定</h2>
+                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                            <div class="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-xl">
+                                ${currentUser.email[0].toUpperCase()}
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold text-slate-800">${currentUser.email}</p>
+                                <p class="text-xs text-slate-400">目前為核心成員</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3">
+                            <button class="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 font-bold text-slate-700">
+                                <span>修改顯示名稱</span>
+                                <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i>
+                            </button>
+                            <button onclick="handleLogout()" class="w-full py-4 bg-rose-50 text-rose-600 font-black rounded-2xl border border-rose-100 mt-4">
+                                登出帳號
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function renderBalances() {
+            // 簡化版的結算顯示
+            const unpaid = mockDebts.filter(d => !d.is_settled);
+            if (unpaid.length === 0) return '<div class="p-8 text-center bg-slate-100 rounded-3xl text-slate-400 italic text-sm">暫無現金欠款</div>';
+            
+            return unpaid.map(d => {
+                const payer = mockProfiles.find(p => p.id === d.payer_id)?.username;
+                const debtor = mockProfiles.find(p => p.id === d.debtor_id)?.username;
+                return `
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-slate-800">${debtor}</span>
+                            <span class="text-slate-400 text-xs mx-2">應支付給</span>
+                            <span class="font-bold text-indigo-600">${payer}</span>
+                        </div>
+                        <div class="text-xl font-black text-rose-500">$${d.amount}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderGiftCard(g) {
+            const giver = mockProfiles.find(p => p.id === g.assignee_id)?.username;
+            const receiver = mockProfiles.find(p => p.id === g.creator_id)?.username;
+            const isMeReceiver = currentUser.id === g.creator_id;
+            const isHidden = g.is_surprise && isMeReceiver && g.status !== 'delivered';
+
+            return `
+                <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="p-2 bg-slate-50 rounded-lg">
+                                <i data-lucide="package" class="w-4 h-4 text-slate-400"></i>
+                            </div>
+                            <h4 class="font-bold text-slate-800">${isHidden ? '🎁 驚喜指定禮物' : g.item_name}</h4>
+                        </div>
+                        <span class="text-xs font-black px-2 py-1 rounded-md ${g.status === 'delivered' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">
+                            ${g.status === 'delivered' ? '已送出' : '採購中'}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-end pt-2 border-t border-slate-50">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${giver} → ${receiver}</p>
+                        <span class="font-black text-slate-700">$${g.estimated_price}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDebtCard(d) {
+            const payer = mockProfiles.find(p => p.id === d.payer_id)?.username;
+            const debtor = mockProfiles.find(p => p.id === d.debtor_id)?.username;
+            return `
+                <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4 ${d.is_settled ? 'opacity-50' : ''}">
+                    <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 flex-shrink-0">
+                        <i data-lucide="image" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-slate-800 text-sm">${d.description}</h4>
+                            <span class="font-black text-rose-500">$${d.amount}</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-bold mt-1 uppercase">${debtor} 欠 ${payer}</p>
+                        ${!d.is_settled ? `
+                            <div class="mt-3 flex justify-end">
+                                <button onclick="showToast('已結清此筆代購')" class="text-[10px] bg-slate-800 text-white px-4 py-1.5 rounded-full font-bold">確認結清</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 彈窗邏輯
+        function openAddModal() {
+            document.getElementById('add-modal').classList.remove('hidden');
+            setModalType('gift');
+        }
+
+        function closeModal() {
+            document.getElementById('add-modal').classList.add('hidden');
+        }
+
+        function setModalType(type) {
+            modalType = type;
+            const btnGift = document.getElementById('btn-type-gift');
+            const btnDebt = document.getElementById('btn-type-debt');
+            const fields = document.getElementById('form-fields');
+
+            if (type === 'gift') {
+                btnGift.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm text-indigo-600";
+                btnDebt.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
+                fields.innerHTML = `
+                    <input type="text" id="f-name" placeholder="我想指定什麼禮物？" class="w-full p-4 bg-slate-50 rounded-xl outline-none border border-slate-100">
+                    <input type="number" id="f-price" placeholder="大約多少錢？" class="w-full p-4 bg-slate-50 rounded-xl outline-none border border-slate-100">
+                    <select id="f-assign" class="w-full p-4 bg-slate-50 rounded-xl outline-none border border-slate-100 appearance-none">
+                        <option value="">指定誰來買？</option>
+                        ${mockProfiles.filter(p=>p.id!=='me').map(p=>`<option value="${p.id}">${p.username}</option>`).join('')}
+                    </select>
+                    <div class="flex items-center gap-2 p-2">
+                        <input type="checkbox" id="f-surprise" class="w-4 h-4 rounded">
+                        <label for="f-surprise" class="text-sm font-bold text-slate-500">開啟驚喜模式 (暫時對我隱藏進度)</label>
+                    </div>
+                `;
+            } else {
+                btnDebt.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm text-indigo-600";
+                btnGift.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
+                fields.innerHTML = `
+                    <input type="text" id="f-desc" placeholder="代購了什麼？" class="w-full p-4 bg-slate-50 rounded-xl outline-none border border-slate-100">
+                    <input type="number" id="f-amt" placeholder="實付金額是多少？" class="w-full p-4 bg-slate-50 rounded-xl outline-none border border-slate-100">
+                    <select id="f-debtor" class="w-full p-4 bg-slate-50 rounded-xl outline-none border border-slate-100 appearance-none">
+                        <option value="">誰欠這筆錢？</option>
+                        ${mockProfiles.map(p=>`<option value="${p.id}">${p.username}</option>`).join('')}
+                    </select>
+                    <button type="button" class="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-bold flex items-center justify-center gap-2">
+                        <i data-lucide="camera" class="w-5 h-5"></i>
+                        <span>上傳收據照片</span>
+                    </button>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function handleSubmit() {
+            showToast("新增成功！(試用模式僅前端模擬)");
+            closeModal();
+        }
+
+        async function handleLogout() {
+            if (isDemoMode) {
+                location.reload();
+                return;
+            }
+            await supabaseClient.auth.signOut();
+            showLogin();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('opacity-100', 'bottom-36');
+            setTimeout(() => {
+                t.classList.remove('opacity-100', 'bottom-36');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
