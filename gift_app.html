@@ -1,13 +1,8 @@
 <!DOCTYPE html>
-const supabaseUrl = 'https://kzzxyyykpiquanxtfkwr.supabase.co'; 
-const supabaseKey = 'sb_publishable_K0ThQ9_ZqPPYk0sxxWgLhg_qwzuMNeG'; 
-
-// 初始化客戶端（這行要補在變數定義之後）
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>神奇好友禮物與代購管理 App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -21,123 +16,121 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         .card-animate { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .card-animate:active { transform: scale(0.98); }
-        .progress-bar { transition: width 1s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-900 overflow-x-hidden">
 
-    <!-- 設定提醒 -->
-    <div id="setup-warning" class="hidden fixed inset-0 z-[100] bg-slate-900/95 flex flex-col items-center justify-center p-8 text-center text-white">
-        <div class="p-6 bg-white/5 rounded-full mb-6">
-            <i data-lucide="database" class="w-16 h-16 text-indigo-400"></i>
-        </div>
-        <h2 class="text-2xl font-bold mb-3">準備好串接資料庫了嗎？</h2>
-        <p class="text-slate-400 mb-8 max-w-xs text-sm leading-relaxed">請在程式碼中填入你的 Supabase URL 與 Anon Key。若想先體驗介面，請點擊下方試用。</p>
-        <button onclick="enterDemoMode()" class="w-full max-w-xs py-4 bg-indigo-600 rounded-2xl font-bold shadow-xl active:scale-95 transition">進入試用模式 (看介面)</button>
-    </div>
-
-    <!-- 登入頁面 -->
-    <div id="login-screen" class="hidden flex flex-col items-center justify-center min-h-screen p-6">
+    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-6">
         <div class="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-10 text-center">
             <div class="inline-block p-5 bg-indigo-50 rounded-3xl text-indigo-600 mb-8">
                 <i data-lucide="gift" class="w-12 h-12"></i>
             </div>
-            <h1 class="text-2xl font-black text-slate-800 mb-10 tracking-tight">神奇好友禮物 App</h1>
+            <h1 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">神奇好友禮物 App</h1>
+            <p class="text-sm text-slate-400 mb-10">請輸入 Email 與密碼登入或註冊</p>
             <form id="login-form" class="space-y-4 text-left">
                 <input type="email" id="email" placeholder="Email" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-slate-100">
                 <input type="password" id="password" placeholder="Password" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none border border-slate-100">
-                <button type="submit" class="w-full py-5 bg-slate-900 text-white font-bold rounded-2xl shadow-lg mt-4">登入</button>
+                <button type="submit" id="auth-submit" class="w-full py-5 bg-slate-900 text-white font-bold rounded-2xl shadow-lg mt-4 active:scale-95 transition">登入 / 註冊</button>
             </form>
+            <p id="auth-error" class="text-rose-500 text-xs mt-4 hidden"></p>
         </div>
     </div>
 
-    <!-- 主程式介面 -->
     <div id="main-app" class="hidden max-w-md mx-auto min-h-screen flex flex-col">
         <header class="p-6 bg-white/80 backdrop-blur-md sticky top-0 z-10 flex justify-between items-center border-b border-slate-100">
             <div>
                 <h1 class="text-xl font-black text-slate-900 tracking-tighter italic">GIFT<span class="text-indigo-600">FLOW</span></h1>
-                <p id="demo-badge" class="hidden text-[10px] font-black text-amber-600 bg-amber-50 px-2 rounded-full border border-amber-100">DEMO</p>
             </div>
-            <div id="user-initial" class="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-white font-black text-sm uppercase"></div>
+            <button onclick="handleLogout()" class="text-xs font-bold text-slate-400">登出</button>
         </header>
 
         <main id="content" class="p-6 flex-1 pb-32">
-            <!-- 內容注入 -->
-        </main>
+            </main>
 
-        <!-- 底部導覽列 -->
         <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-morphism border-t border-slate-100 px-6 pt-4 pb-8 flex justify-between items-center z-20 safe-bottom">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 transition-all"><i data-lucide="layout-grid" class="w-6 h-6"></i><span class="text-[10px] font-bold">總覽</span></button>
-            <button onclick="switchTab('gifts')" id="nav-gifts" class="flex flex-col items-center gap-1 transition-all"><i data-lucide="gift" class="w-6 h-6"></i><span class="text-[10px] font-bold">禮物</span></button>
+            <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1"><i data-lucide="layout-grid" class="w-6 h-6"></i><span class="text-[10px] font-bold">總覽</span></button>
+            <button onclick="switchTab('gifts')" class="flex flex-col items-center gap-1"><i data-lucide="gift" class="w-6 h-6"></i><span class="text-[10px] font-bold">禮物</span></button>
             <div class="relative -top-10">
                 <button onclick="openAddModal()" class="bg-indigo-600 text-white p-5 rounded-[2rem] shadow-xl shadow-indigo-300 ring-8 ring-slate-50/50"><i data-lucide="plus" class="w-7 h-7"></i></button>
             </div>
-            <button onclick="switchTab('debts')" id="nav-debts" class="flex flex-col items-center gap-1 transition-all"><i data-lucide="credit-card" class="w-6 h-6"></i><span class="text-[10px] font-bold">債務</span></button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 transition-all"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] font-bold">我的</span></button>
+            <button onclick="switchTab('debts')" class="flex flex-col items-center gap-1"><i data-lucide="credit-card" class="w-6 h-6"></i><span class="text-[10px] font-bold">債務</span></button>
+            <button onclick="switchTab('settings')" class="flex flex-col items-center gap-1"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] font-bold">我的</span></button>
         </nav>
     </div>
 
-    <!-- 彈窗 -->
-    <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="bg-white w-full max-w-md rounded-t-[3rem] sm:rounded-[3rem] p-10">
+    <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-end justify-center">
+        <div class="bg-white w-full max-w-md rounded-t-[3rem] p-10 animate-in slide-in-from-bottom duration-300">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-2xl font-black">新增紀錄</h2>
                 <button onclick="closeModal()" class="p-3 bg-slate-50 rounded-2xl"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="flex p-1.5 bg-slate-100 rounded-2xl mb-8">
-                <button onclick="setModalType('gift')" id="btn-type-gift" class="flex-1 py-3 rounded-xl font-bold text-sm bg-white shadow-sm text-indigo-600">指定禮物</button>
-                <button onclick="setModalType('wish')" id="btn-type-wish" class="flex-1 py-3 rounded-xl font-bold text-sm text-slate-400">考慮清單</button>
-                <button onclick="setModalType('debt')" id="btn-type-debt" class="flex-1 py-3 rounded-xl font-bold text-sm text-slate-400">代購現金</button>
-            </div>
             <form id="add-form" class="space-y-4">
-                <div id="form-fields" class="space-y-4"></div>
-                <button type="button" onclick="handleSubmit()" class="w-full py-5 bg-indigo-600 text-white font-bold rounded-2xl mt-6 shadow-xl">發佈</button>
+                <input type="text" id="add-item-name" placeholder="項目名稱" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                <input type="number" id="add-amount" placeholder="金額" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                <button type="button" onclick="handleSubmit()" class="w-full py-5 bg-indigo-600 text-white font-bold rounded-2xl mt-6 shadow-xl">發佈到雲端</button>
             </form>
         </div>
     </div>
 
     <script>
-        const supabaseUrl = ''; 
-        const supabaseKey = '';
-        let isDemoMode = false;
+        // 1. Supabase 初始化
+        const supabaseUrl = 'https://kzzxyyykpiquanxtfkwr.supabase.co'; 
+        const supabaseKey = 'sb_publishable_K0ThQ9_ZqPPYk0sxxWgLhg_qwzuMNeG'; 
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
         let currentUser = null;
         let activeTab = 'dashboard';
-        let modalType = 'gift';
 
-        // 模擬資料 (增加生日資訊與考慮清單)
-        let mockProfiles = [
-            { id: '1', username: '朋友 A', birthday: '03-15' },
-            { id: '2', username: '朋友 B', birthday: '08-22' },
-            { id: 'me', username: '我', birthday: '11-10' }
-        ];
-        let mockGifts = [
-            { id: 'g1', item_name: '機械鍵盤', estimated_price: 3200, assignee_id: '1', creator_id: 'me', status: 'buying', created_at: '2026-01-01' },
-            { id: 'g2', item_name: '樂高人偶組', estimated_price: 1200, assignee_id: 'me', creator_id: '2', status: 'delivered', created_at: '2025-12-25' },
-            { id: 'g3', item_name: '香氛蠟燭', estimated_price: 850, assignee_id: '2', creator_id: '1', status: 'delivered', created_at: '2025-11-05' }
-        ];
-        let mockWishlist = [
-            { id: 'w1', item_name: '降噪耳機', note: '想送給 A 的生日靈感', price_range: '5000-7000' },
-            { id: 'w2', item_name: '限定版鋼筆', note: '這組真的很好看', price_range: '1500' }
-        ];
-        let mockDebts = [
-            { id: 'd1', description: '代購鋼彈', amount: 1500, payer_id: '1', debtor_id: 'me', is_settled: false, created_at: new Date().toISOString() }
-        ];
-
-        window.onload = () => {
+        window.onload = async () => {
             lucide.createIcons();
-            if (!supabaseUrl) document.getElementById('setup-warning').classList.remove('hidden');
+            // 檢查是否已登入
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                showApp();
+            }
         };
 
-        function enterDemoMode() {
-            isDemoMode = true;
-            currentUser = { id: 'me', email: 'demo@gift.com' };
-            document.getElementById('setup-warning').classList.add('hidden');
-            document.getElementById('demo-badge').classList.remove('hidden');
-            document.getElementById('user-initial').innerText = 'D';
+        // 2. 身份驗證邏輯
+        const loginForm = document.getElementById('login-form');
+        loginForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('auth-submit');
+            const errEl = document.getElementById('auth-error');
+
+            btn.innerText = "驗證中...";
+            
+            // 嘗試登入
+            let { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+            // 如果登入失敗，嘗試註冊
+            if (error) {
+                const { data: signUpData, error: signUpError } = await _supabase.auth.signUp({ email, password });
+                if (signUpError) {
+                    errEl.innerText = signUpError.message;
+                    errEl.classList.remove('hidden');
+                    btn.innerText = "登入 / 註冊";
+                    return;
+                }
+                alert("註冊成功！請檢查 Email 確認信，或直接嘗試登入。");
+                btn.innerText = "登入 / 註冊";
+                return;
+            }
+
+            currentUser = data.user;
             showApp();
+        };
+
+        async function handleLogout() {
+            await _supabase.auth.signOut();
+            window.location.reload();
         }
 
+        // 3. UI 控制
         function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             renderContent();
         }
@@ -147,180 +140,54 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
             renderContent();
         }
 
-        // 生日計算邏輯
-        function getNextBirthday() {
-            const today = new Date();
-            let nearest = null;
-            let minDiff = Infinity;
-
-            mockProfiles.forEach(p => {
-                const [m, d] = p.birthday.split('-').map(Number);
-                let bday = new Date(today.getFullYear(), m - 1, d);
-                if (bday < today) bday.setFullYear(today.getFullYear() + 1);
-                
-                const diff = Math.ceil((bday - today) / (1000 * 60 * 60 * 24));
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    nearest = { ...p, daysLeft: diff };
-                }
-            });
-            return nearest;
-        }
-
         function renderContent() {
             const container = document.getElementById('content');
             let html = '';
 
             if (activeTab === 'dashboard') {
-                const nextBday = getNextBirthday();
                 html = `
-                    <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <!-- 下個生日提醒 -->
-                        <div class="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
-                            <div class="relative z-10 flex justify-between items-center">
-                                <div>
-                                    <p class="text-[10px] font-black tracking-widest uppercase opacity-60 mb-1">Next Birthday</p>
-                                    <h2 class="text-2xl font-black">${nextBday.username} 的生日</h2>
-                                    <p class="text-5xl font-black mt-2 tracking-tighter">${nextBday.daysLeft}<span class="text-lg ml-1 opacity-60">Days Left</span></p>
-                                </div>
-                                <div class="bg-white/20 p-4 rounded-3xl backdrop-blur-md"><i data-lucide="cake" class="w-8 h-8"></i></div>
-                            </div>
-                        </div>
-
-                        <!-- 圓餅圖統計 -->
-                        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                            <h3 class="text-xs font-black text-slate-400 tracking-widest uppercase mb-6">送禮價值分布</h3>
-                            <div class="relative h-48 flex justify-center">
-                                <canvas id="giftChart"></canvas>
-                            </div>
-                            <div id="chart-legend" class="mt-6 grid grid-cols-3 gap-2 text-center text-[10px] font-bold text-slate-400"></div>
-                        </div>
-
-                        <!-- 現金結算 -->
-                        <section>
-                            <h3 class="text-xs font-black text-slate-400 tracking-widest uppercase mb-4 px-2">現金代購餘額</h3>
-                            ${renderCashBalances()}
-                        </section>
+                    <div class="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-xl mb-6">
+                        <p class="text-[10px] font-black tracking-widest uppercase opacity-60 mb-1">Welcome back</p>
+                        <h2 class="text-2xl font-black">${currentUser.email}</h2>
+                    </div>
+                    <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 text-center">
+                        <p class="text-slate-400 font-bold">雲端資料庫已連線</p>
+                        <p class="text-xs text-slate-300 mt-2">現在您可以開始管理您的禮物清單</p>
                     </div>
                 `;
-                setTimeout(initChart, 100);
-            } else if (activeTab === 'gifts') {
-                html = `
-                    <div class="space-y-8">
-                        <section>
-                            <h2 class="text-3xl font-black text-slate-900 tracking-tight mb-4">送禮任務</h2>
-                            <div class="space-y-4">${mockGifts.map(g => renderGiftCard(g)).join('')}</div>
-                        </section>
-                        <section class="mt-10">
-                            <h3 class="text-xs font-black text-amber-500 tracking-widest uppercase mb-4 px-2 flex items-center gap-2">
-                                <i data-lucide="lightbulb" class="w-3 h-3"></i> 考慮清單 (靈感)
-                            </h3>
-                            <div class="grid grid-cols-1 gap-4">${mockWishlist.map(w => renderWishCard(w)).join('')}</div>
-                        </section>
-                    </div>
-                `;
-            } else if (activeTab === 'debts') {
-                html = `<div class="space-y-4"><h2 class="text-3xl font-black mb-6">代購清單</h2>${mockDebts.map(d => renderDebtCard(d)).join('')}</div>`;
-            } else if (activeTab === 'settings') {
-                html = `<div class="p-4 bg-white rounded-[2.5rem] shadow-sm border border-slate-100"><p class="font-bold text-center py-10">設定頁面 - 預覽模式</p></div>`;
+            } else {
+                html = `<div class="p-10 text-center text-slate-400 font-bold">頁面開發中...</div>`;
             }
-
             container.innerHTML = html;
             lucide.createIcons();
         }
 
-        function initChart() {
-            const ctx = document.getElementById('giftChart').getContext('2d');
-            const dataMap = {};
-            mockProfiles.forEach(p => dataMap[p.username] = 0);
-            mockGifts.filter(g => g.status === 'delivered').forEach(g => {
-                const giverName = mockProfiles.find(p => p.id === g.assignee_id).username;
-                dataMap[giverName] += g.estimated_price;
-            });
-
-            const labels = Object.keys(dataMap);
-            const values = Object.values(dataMap);
-            const colors = ['#6366f1', '#a855f7', '#ec4899'];
-
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: colors,
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    cutout: '75%',
-                    plugins: { legend: { display: false } },
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-
-            const legend = document.getElementById('chart-legend');
-            legend.innerHTML = labels.map((l, i) => `<div><div class="w-2 h-2 rounded-full mx-auto mb-1" style="background:${colors[i]}"></div>${l}<br>$${values[i]}</div>`).join('');
-        }
-
-        function renderCashBalances() {
-            const unpaid = mockDebts.filter(d => !d.is_settled);
-            return unpaid.length ? unpaid.map(d => `<div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex justify-between items-center"><p class="text-sm font-bold text-slate-800">${mockProfiles.find(p => p.id === d.payer_id).username} 墊付的</p><span class="font-black text-rose-500">$${d.amount}</span></div>`).join('') : '<p class="text-center text-slate-300 text-xs py-4 italic uppercase">All Settled</p>';
-        }
-
-        function renderGiftCard(g) {
-            return `
-                <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 card-animate">
-                    <div class="flex justify-between items-start">
-                        <h4 class="font-black text-slate-800">${g.item_name}</h4>
-                        <span class="text-[9px] font-black px-3 py-1 rounded-full uppercase ${g.status==='delivered'?'bg-emerald-50 text-emerald-600':'bg-amber-50 text-amber-600'}">${g.status}</span>
-                    </div>
-                    <p class="text-[10px] text-slate-400 font-bold mt-2 uppercase">${mockProfiles.find(p=>p.id===g.assignee_id).username} → ${mockProfiles.find(p=>p.id===g.creator_id).username}</p>
-                </div>
-            `;
-        }
-
-        function renderWishCard(w) {
-            return `
-                <div class="bg-amber-50/50 p-5 rounded-[2rem] border border-amber-100 card-animate">
-                    <div class="flex justify-between items-center mb-1">
-                        <h4 class="font-bold text-amber-800">${w.item_name}</h4>
-                        <span class="text-[10px] font-black text-amber-500 tracking-tight">$ ${w.price_range}</span>
-                    </div>
-                    <p class="text-[10px] text-amber-600 opacity-70 italic">${w.note}</p>
-                </div>
-            `;
-        }
-
-        function renderDebtCard(d) {
-            return `<div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 flex justify-between items-center"><p class="font-bold">${d.description}</p><span class="font-black text-rose-500">$${d.amount}</span></div>`;
-        }
-
-        function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); setModalType('gift'); }
+        // 4. 資料操作
+        function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('add-modal').classList.add('hidden'); }
 
-        function setModalType(type) {
-            modalType = type;
-            const fields = document.getElementById('form-fields');
-            const btns = ['gift', 'wish', 'debt'];
-            btns.forEach(b => {
-                const el = document.getElementById(`btn-type-${b}`);
-                if (b === type) el.className = "flex-1 py-3 rounded-xl font-bold text-sm bg-white shadow-sm text-indigo-600";
-                else el.className = "flex-1 py-3 rounded-xl font-bold text-sm text-slate-400";
-            });
+        async function handleSubmit() {
+            const itemName = document.getElementById('add-item-name').value;
+            const amount = document.getElementById('add-amount').value;
 
-            if (type === 'gift') {
-                fields.innerHTML = `<input type="text" placeholder="禮物名稱" class="w-full p-4 bg-slate-50 rounded-2xl outline-none"><input type="number" placeholder="預估價值" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">`;
-            } else if (type === 'wish') {
-                fields.innerHTML = `<input type="text" placeholder="靈感內容" class="w-full p-4 bg-slate-50 rounded-2xl outline-none"><textarea placeholder="備註或網址" class="w-full p-4 bg-slate-50 rounded-2xl outline-none"></textarea>`;
+            if (!itemName) return alert("請輸入名稱");
+
+            const { error } = await _supabase
+                .from('gifts') // 請確保資料庫有 gifts 這張表
+                .insert([{ 
+                    item_name: itemName, 
+                    estimated_price: parseInt(amount) || 0,
+                    creator_id: currentUser.id
+                }]);
+
+            if (error) {
+                alert("寫入失敗：" + error.message);
             } else {
-                fields.innerHTML = `<input type="text" placeholder="代購項目" class="w-full p-4 bg-slate-50 rounded-2xl outline-none"><input type="number" placeholder="支付金額" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">`;
+                alert("成功存入 Supabase！");
+                closeModal();
+                renderContent();
             }
         }
-
-        function handleSubmit() { alert("已新增到雲端！(試用模式僅前端模擬)"); closeModal(); }
     </script>
 </body>
 </html>
