@@ -1,237 +1,106 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>GIFTFLOW PRO - 專業版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        .btn-active:active { transform: scale(0.95); }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-900 overflow-x-hidden">
+-- 1. 基礎清理 (確保環境乾淨)
+DROP TABLE IF EXISTS public.ledgers CASCADE;
+DROP TABLE IF EXISTS public.gifts CASCADE;
+DROP TABLE IF EXISTS public.group_members CASCADE;
+DROP TABLE IF EXISTS public.groups CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
 
-    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-6">
-        <div class="w-full max-w-md bg-white rounded-[3rem] shadow-2xl p-10 text-center border">
-            <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto mb-6 flex items-center justify-center text-white">
-                <i data-lucide="gift"></i>
-            </div>
-            <h1 class="text-2xl font-black mb-8">GIFTFLOW PRO</h1>
-            <form id="login-form" class="space-y-4 text-left">
-                <input type="email" id="email" placeholder="Email" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                <input type="password" id="password" placeholder="密碼" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                <button type="submit" class="w-full py-5 bg-slate-900 text-white font-bold rounded-2xl active:scale-95 transition-transform">登入系統</button>
-            </form>
-        </div>
-    </div>
+-- 2. 個人檔案 (Profiles)
+CREATE TABLE public.profiles (
+    id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+    username TEXT,
+    birthday DATE,
+    avatar_url TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    <div id="main-app" class="hidden max-w-md mx-auto min-h-screen flex flex-col">
-        <header class="p-6 bg-white flex justify-between items-center border-b sticky top-0 z-10 glass">
-            <h1 class="text-xl font-black italic text-indigo-600">GIFTFLOW</h1>
-            <button onclick="handleLogout()" class="text-[10px] font-black text-slate-300">LOGOUT</button>
-        </header>
+-- 3. 群組系統 (Groups & Invitation)
+CREATE TABLE public.groups (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    invite_code TEXT UNIQUE DEFAULT substring(md5(random()::text) from 1 for 6), -- 自動生成 6 碼邀請碼
+    creator_id UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-        <main id="content" class="p-6 flex-1 pb-32">
-            </main>
+-- 4. 群組成員 (Group Members)
+CREATE TABLE public.group_members (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    nickname TEXT,
+    role TEXT DEFAULT 'member', -- 預留角色欄位 (admin/member)
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(group_id, user_id)
+);
 
-        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass border-t px-8 pt-4 pb-8 flex justify-between items-center z-20 safe-bottom">
-            <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1 opacity-30" id="nav-dashboard"><i data-lucide="calendar"></i><span class="text-[10px] font-bold">倒數</span></button>
-            <button onclick="switchTab('gifts')" class="flex flex-col items-center gap-1 opacity-30" id="nav-gifts"><i data-lucide="package"></i><span class="text-[10px] font-bold">願望</span></button>
-            <div class="relative -top-8">
-                <button onclick="openAddModal()" class="bg-indigo-600 text-white p-5 rounded-full shadow-xl ring-8 ring-white btn-active"><i data-lucide="plus"></i></button>
-            </div>
-            <button onclick="switchTab('ledgers')" class="flex flex-col items-center gap-1 opacity-30" id="nav-ledgers"><i data-lucide="landmark"></i><span class="text-[10px] font-bold">對帳</span></button>
-            <button onclick="switchTab('settings')" class="flex flex-col items-center gap-1 opacity-30" id="nav-settings"><i data-lucide="settings"></i><span class="text-[10px] font-bold">設定</span></button>
-        </nav>
-    </div>
+-- 5. 禮物願望 (Gifts - 支援認領保密)
+CREATE TABLE public.gifts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE NOT NULL,
+    creator_id UUID REFERENCES auth.users(id) NOT NULL,
+    item_name TEXT NOT NULL,
+    amount INTEGER DEFAULT 0,
+    priority TEXT DEFAULT 'normal' CHECK (priority IN ('high', 'normal', 'low')),
+    is_reserved BOOLEAN DEFAULT FALSE,
+    reserved_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-end justify-center">
-        <div class="bg-white w-full max-w-md rounded-t-[3.5rem] p-10 shadow-2xl animate-in slide-in-from-bottom">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black">新增紀錄</h2>
-                <button onclick="closeModal()" class="p-2"><i data-lucide="x"></i></button>
-            </div>
-            <div class="flex bg-slate-100 rounded-2xl p-1 mb-6">
-                <button onclick="setAddType('wishlist')" id="type-wish" class="flex-1 py-3 rounded-xl text-xs font-black bg-white shadow-sm text-indigo-600">🎁 願望</button>
-                <button onclick="setAddType('debt')" id="type-debt" class="flex-1 py-3 rounded-xl text-xs font-black text-slate-400">💸 帳務</button>
-            </div>
-            <form id="add-form" class="space-y-4">
-                <input type="text" id="add-name" placeholder="名稱" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                <div class="flex gap-4">
-                    <input type="number" id="add-amount" placeholder="金額" class="flex-1 p-4 bg-slate-50 rounded-2xl outline-none">
-                    <select id="add-priority" class="flex-1 p-4 bg-slate-50 rounded-2xl outline-none font-bold text-xs">
-                        <option value="normal">權重: 一般</option>
-                        <option value="high">🔥 想要</option>
-                        <option value="low">隨緣</option>
-                    </select>
-                </div>
-                <select id="add-group-id" class="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-sm text-indigo-600"></select>
-                <button type="button" onclick="handleSubmit()" class="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl mt-4">發佈到群組</button>
-            </form>
-        </div>
-    </div>
+-- 6. 嚴謹帳務 (Ledgers - 支援雙向確認)
+CREATE TABLE public.ledgers (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE NOT NULL,
+    creditor_id UUID REFERENCES auth.users(id) NOT NULL, -- 收款人
+    debtor_id UUID REFERENCES auth.users(id) NOT NULL,   -- 付款人
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'settled')),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    <script>
-        const supabaseUrl = 'https://kzzxyyykpiquanxtfkwr.supabase.co'; 
-        const supabaseKey = 'sb_publishable_K0ThQ9_ZqPPYk0sxxWgLhg_qwzuMNeG'; 
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+-- 7. RLS 安全防護 (核心邏輯：僅限群組成員存取)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.gifts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ledgers ENABLE ROW LEVEL SECURITY;
 
-        let currentUser = null, activeTab = 'dashboard', currentAddType = 'wishlist';
+-- Profile: 任何人可讀 (為了顯示名字)，自己可改
+CREATE POLICY "Public profiles" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Insert profile" ON public.profiles FOR INSERT WITH CHECK (true);
 
-        window.onload = async () => {
-            const { data: { session } } = await _supabase.auth.getSession();
-            if (session) { currentUser = session.user; showApp(); }
-            lucide.createIcons();
-        };
+-- Groups: 群組成員可見
+CREATE POLICY "View groups" ON public.groups FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.group_members WHERE group_id = id AND user_id = auth.uid()) OR
+    auth.uid() = creator_id -- 創建者可見 (防止創建後尚未加入時的空窗期)
+);
+CREATE POLICY "Create groups" ON public.groups FOR INSERT WITH CHECK (auth.uid() = creator_id);
 
-        function showApp() {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            switchTab('dashboard');
-            loadGroupsToSelect();
-        }
+-- Group Members: 成員可見
+CREATE POLICY "View members" ON public.group_members FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid())
+);
+CREATE POLICY "Join groups" ON public.group_members FOR INSERT WITH CHECK (true); -- 允許加入
 
-        async function renderContent() {
-            const container = document.getElementById('content');
-            container.innerHTML = '<div class="py-20 text-center opacity-20 font-black">LOADING...</div>';
+-- Gifts & Ledgers: 僅限同群組成員
+CREATE POLICY "Group isolation for gifts" ON public.gifts FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.group_members WHERE group_id = gifts.group_id AND user_id = auth.uid())
+);
 
-            if (activeTab === 'dashboard') {
-                const { data: members } = await _supabase.from('group_members').select('*, profiles(*)');
-                const sorted = (members || []).map(m => ({ ...m, days: calculateDays(m.profiles?.birthday) })).sort((a, b) => a.days - b.days);
+CREATE POLICY "Group isolation for ledgers" ON public.ledgers FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.group_members WHERE group_id = ledgers.group_id AND user_id = auth.uid())
+);
 
-                container.innerHTML = `
-                    <h2 class="text-2xl font-black mb-8 flex items-center gap-2">🎂 好友生日倒數</h2>
-                    <div class="space-y-4">
-                        ${sorted.map(m => `
-                            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex justify-between items-center transition-all">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">${(m.nickname || m.profiles?.username || 'U')[0]}</div>
-                                    <div>
-                                        <p class="font-bold">${m.nickname || m.profiles?.username || '匿名好友'}</p>
-                                        <button onclick="syncCalendar('${m.nickname || m.profiles?.username}', '${m.profiles?.birthday}')" class="text-[9px] font-black text-indigo-400 uppercase">Sync to Calendar</button>
-                                    </div>
-                                </div>
-                                <div class="text-right"><p class="text-2xl font-black text-indigo-600">${m.days}<span class="text-[10px] ml-1 opacity-20">天</span></p></div>
-                            </div>
-                        `).join('')}
-                    </div>`;
-            } else if (activeTab === 'gifts') {
-                const { data: gifts } = await _supabase.from('gifts').select('*');
-                container.innerHTML = `
-                    <h2 class="text-2xl font-black mb-8">🎁 願望保密室</h2>
-                    <div class="grid grid-cols-1 gap-4">
-                        ${(gifts || []).map(g => {
-                            const isMine = g.creator_id === currentUser.id;
-                            return `
-                            <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 flex justify-between items-center">
-                                <div>
-                                    <p class="font-bold text-slate-800">${g.item_name} ${g.priority === 'high' ? '🔥' : ''}</p>
-                                    <p class="text-xs font-black text-indigo-400">$ ${g.amount.toLocaleString()}</p>
-                                </div>
-                                ${isMine ? `<span class="text-[10px] font-black text-slate-300 uppercase">${g.is_reserved ? '已被認領🤫' : '等待驚喜'}</span>` : 
-                                (g.is_reserved ? `<span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">已被認領</span>` : 
-                                `<button onclick="reserveGift('${g.id}')" class="text-[10px] font-black bg-slate-900 text-white px-5 py-2 rounded-full active:scale-90 transition-transform">認領</button>`)}
-                            </div>`;
-                        }).join('')}
-                    </div>`;
-            } else if (activeTab === 'ledgers') {
-                const { data: ledgers } = await _supabase.from('ledgers').select('*');
-                container.innerHTML = `
-                    <h2 class="text-2xl font-black mb-8 text-emerald-600">💸 雙向對帳單</h2>
-                    <div class="space-y-4">
-                        ${(ledgers || []).map(l => `
-                            <div class="bg-white p-6 rounded-[2.5rem] border ${l.status==='pending' ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'} flex justify-between items-center">
-                                <div>
-                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${l.description || '對帳紀錄'}</p>
-                                    <p class="font-bold ${l.creditor_id === currentUser.id ? 'text-emerald-600' : 'text-rose-600'}">
-                                        ${l.creditor_id === currentUser.id ? '應收' : '應付'} $ ${l.amount}
-                                    </p>
-                                </div>
-                                ${l.status === 'pending' && l.debtor_id === currentUser.id ? 
-                                `<button onclick="confirmLedger('${l.id}')" class="text-[10px] font-black bg-emerald-600 text-white px-4 py-2 rounded-full">點擊確認</button>` : 
-                                `<span class="text-[10px] font-black uppercase text-slate-300">${l.status}</span>`}
-                            </div>`).join('')}
-                    </div>`;
-            }
-            lucide.createIcons();
-        }
+-- 8. 自動同步 Profile Trigger
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username) VALUES (new.id, new.email);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-        async function reserveGift(id) {
-            const { error } = await _supabase.from('gifts').update({ is_reserved: true, reserved_by: currentUser.id }).eq('id', id);
-            if (!error) { triggerVibrate(); renderContent(); }
-        }
-
-        async function confirmLedger(id) {
-            const { error } = await _supabase.from('ledgers').update({ status: 'confirmed' }).eq('id', id);
-            if (!error) { triggerVibrate(); renderContent(); }
-        }
-
-        function calculateDays(d) {
-            if (!d) return 999;
-            const t = new Date(), b = new Date(d); b.setFullYear(t.getFullYear());
-            if (b < t) b.setFullYear(t.getFullYear() + 1);
-            return Math.ceil((b - t) / (864e5));
-        }
-
-        function syncCalendar(name, bday) {
-            if (!bday) return alert("對方尚未設定生日");
-            const [m, d] = bday.split('-');
-            window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(name + ' 生日禮物準備')}&dates=${new Date().getFullYear()}${m}${d}/${new Date().getFullYear()}${m}${d}`, '_blank');
-        }
-
-        function triggerVibrate() { if (navigator.vibrate) navigator.vibrate(50); }
-
-        async function handleSubmit() {
-            const name = document.getElementById('add-name').value, amount = document.getElementById('add-amount').value;
-            const group = document.getElementById('add-group-id').value, prio = document.getElementById('add-priority').value;
-            if (!name || !group) return alert("資訊不完整");
-
-            let res;
-            if (currentAddType === 'wishlist') {
-                res = await _supabase.from('gifts').insert([{ item_name: name, amount: parseInt(amount) || 0, group_id: group, priority: prio, creator_id: currentUser.id }]);
-            } else {
-                res = await _supabase.from('ledgers').insert([{ description: name, amount: parseInt(amount) || 0, group_id: group, creditor_id: currentUser.id, debtor_id: '此處需串接群組成員ID' }]);
-            }
-            if (!res.error) { triggerVibrate(); closeModal(); renderContent(); }
-        }
-
-        function switchTab(tab) {
-            activeTab = tab;
-            document.querySelectorAll('nav button').forEach(b => b.classList.add('opacity-30'));
-            document.getElementById('nav-' + tab).classList.remove('opacity-30');
-            renderContent();
-        }
-
-        function setAddType(t) {
-            currentAddType = t;
-            const isW = t === 'wishlist';
-            document.getElementById('btn-wish').className = isW ? 'flex-1 py-3 rounded-xl text-xs font-black bg-white shadow-sm text-indigo-600 transition-all' : 'flex-1 py-3 rounded-xl text-xs font-black text-slate-400 transition-all';
-            document.getElementById('btn-debt').className = !isW ? 'flex-1 py-3 rounded-xl text-xs font-black bg-white shadow-sm text-indigo-600 transition-all' : 'flex-1 py-3 rounded-xl text-xs font-black text-slate-400 transition-all';
-        }
-
-        async function loadGroupsToSelect() {
-            const { data } = await _supabase.from('groups').select('*');
-            const select = document.getElementById('add-group-id');
-            if (data && select) {
-                select.innerHTML = '<option value="">選擇群組 *</option>';
-                data.forEach(g => select.innerHTML += `<option value="${g.id}">${g.name}</option>`);
-            }
-        }
-
-        function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); }
-        function closeModal() { document.getElementById('add-modal').classList.add('hidden'); }
-        async function handleLogout() { await _supabase.auth.signOut(); window.location.reload(); }
-        document.getElementById('login-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const { data, error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value });
-            if (!error) { currentUser = data.user; showApp(); }
-        };
-    </script>
-</body>
-</html>
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
