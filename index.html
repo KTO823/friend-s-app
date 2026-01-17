@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>神奇好友群組 App</title>
+    <title>GIFTFLOW - 神奇好友群組 App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -12,13 +12,16 @@
         body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
         .glass-morphism { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-900">
 
     <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-6">
         <div class="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-10 text-center border">
-            <h1 class="text-2xl font-black mb-8 text-indigo-600">GIFTFLOW 群組版</h1>
+            <i data-lucide="gift" class="w-12 h-12 mx-auto text-indigo-600 mb-6"></i>
+            <h1 class="text-2xl font-black mb-8">GIFTFLOW</h1>
             <form id="login-form" class="space-y-4">
                 <input type="email" id="email" placeholder="Email" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
                 <input type="password" id="password" placeholder="密碼" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
@@ -28,50 +31,46 @@
     </div>
 
     <div id="main-app" class="hidden max-w-md mx-auto min-h-screen flex flex-col">
-        <header class="p-6 bg-white flex justify-between items-center border-b sticky top-0 z-10">
-            <h1 class="text-xl font-black italic text-indigo-600">GIFTFLOW</h1>
-            <button onclick="handleLogout()" class="text-xs font-bold text-slate-300">登出</button>
+        <header class="p-6 bg-white/80 backdrop-blur-md sticky top-0 z-10 flex justify-between items-center border-b border-slate-100">
+            <h1 class="text-xl font-black italic text-indigo-600 tracking-tighter">GIFTFLOW</h1>
+            <div id="user-avatar" class="w-8 h-8 bg-indigo-100 rounded-full border-2 border-white shadow-sm overflow-hidden"></div>
         </header>
 
         <main id="content" class="p-6 flex-1 pb-32">
             </main>
 
-        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-morphism border-t px-6 pt-4 pb-8 flex justify-between items-center z-20 safe-bottom">
-            <button onclick="switchTab('dashboard')" class="flex flex-col items-center"><i data-lucide="home"></i><span class="text-[10px] font-bold">總覽</span></button>
-            <button onclick="switchTab('gifts')" class="flex flex-col items-center"><i data-lucide="shopping-bag"></i><span class="text-[10px] font-bold">願望/債務</span></button>
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-morphism border-t border-slate-100 px-6 pt-4 pb-8 flex justify-between items-center z-20 safe-bottom">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 opacity-40 transition-all"><i data-lucide="layout-grid" class="w-6 h-6"></i><span class="text-[10px] font-bold">總覽</span></button>
+            <button onclick="switchTab('gifts')" id="nav-gifts" class="flex flex-col items-center gap-1 opacity-40 transition-all"><i data-lucide="gift" class="w-6 h-6"></i><span class="text-[10px] font-bold">清單</span></button>
             <div class="relative -top-10">
-                <button onclick="openAddModal()" class="bg-indigo-600 text-white p-5 rounded-full shadow-xl ring-8 ring-slate-50/50"><i data-lucide="plus"></i></button>
+                <button onclick="openAddModal()" class="bg-indigo-600 text-white p-5 rounded-full shadow-xl shadow-indigo-200 active:scale-90 transition-transform"><i data-lucide="plus" class="w-7 h-7"></i></button>
             </div>
-            <button onclick="switchTab('groups')" class="flex flex-col items-center"><i data-lucide="users"></i><span class="text-[10px] font-bold">群組</span></button>
-            <button onclick="switchTab('settings')" class="flex flex-col items-center"><i data-lucide="settings"></i><span class="text-[10px] font-bold">設定</span></button>
+            <button onclick="switchTab('groups')" id="nav-groups" class="flex flex-col items-center gap-1 opacity-40 transition-all"><i data-lucide="users" class="w-6 h-6"></i><span class="text-[10px] font-bold">群組</span></button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 opacity-40 transition-all"><i data-lucide="settings" class="w-6 h-6"></i><span class="text-[10px] font-bold">設定</span></button>
         </nav>
     </div>
 
-    <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-end justify-center">
-        <div class="bg-white w-full max-w-md rounded-t-[3rem] p-10">
+    <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-end justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-md rounded-t-[3rem] sm:rounded-[3rem] p-10 animate-in slide-in-from-bottom duration-300">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-black">新增紀錄</h2>
-                <button onclick="closeModal()"><i data-lucide="x"></i></button>
+                <button onclick="closeModal()" class="p-2 bg-slate-50 rounded-xl"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <div class="flex gap-2 mb-6">
-                <button onclick="setAddType('wishlist')" id="btn-wishlist" class="flex-1 py-3 rounded-xl font-bold text-sm bg-indigo-600 text-white">🎁 願望清單</button>
-                <button onclick="setAddType('debt')" id="btn-debt" class="flex-1 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-400">💸 債務紀錄</button>
+            <div class="flex p-1 bg-slate-100 rounded-2xl mb-6">
+                <button onclick="setAddType('wishlist')" id="type-wish" class="flex-1 py-3 rounded-xl text-xs font-bold bg-white shadow-sm text-indigo-600">🎁 願望清單</button>
+                <button onclick="setAddType('debt')" id="type-debt" class="flex-1 py-3 rounded-xl text-xs font-bold text-slate-400">💸 債務紀錄</button>
             </div>
 
             <form id="add-form" class="space-y-4">
-                <input type="text" id="add-name" placeholder="名稱" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                <input type="number" id="add-price" placeholder="預估金額" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-                <select id="add-group" class="w-full p-4 bg-slate-50 rounded-2xl outline-none border-none">
-                    <option value="">選擇群組 (或全部)</option>
-                </select>
-                <div class="border-2 border-dashed border-slate-200 p-4 rounded-2xl text-center">
-                    <input type="file" id="add-image" class="hidden" accept="image/*">
-                    <label for="add-image" class="cursor-pointer text-xs font-bold text-slate-400 flex flex-col items-center gap-2">
-                        <i data-lucide="camera"></i> 點擊上傳圖片 (選填)
-                    </label>
+                <input type="text" id="add-name" placeholder="項目名稱" required class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                <input type="number" id="add-amount" placeholder="金額 (選填)" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                <select id="add-group-id" class="w-full p-4 bg-slate-50 rounded-2xl outline-none"></select>
+                <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
+                    <i data-lucide="image" class="text-slate-400"></i>
+                    <input type="text" id="add-image-url" placeholder="圖片連結 (選填)" class="flex-1 bg-transparent outline-none text-sm">
                 </div>
-                <button type="button" onclick="handleSubmit()" class="w-full py-5 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl">發佈</button>
+                <button type="button" onclick="handleSubmit()" class="w-full py-5 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-100">發佈到群組</button>
             </form>
         </div>
     </div>
@@ -91,88 +90,75 @@
             lucide.createIcons();
         };
 
-        // UI 切換
         function showApp() {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
-            renderContent();
+            switchTab('dashboard');
             loadGroupsToSelect();
         }
 
         async function renderContent() {
             const container = document.getElementById('content');
-            container.innerHTML = '<div class="text-center py-10 opacity-30">載入中...</div>';
+            container.innerHTML = '<div class="py-20 text-center animate-pulse text-slate-300 font-bold">LOADING...</div>';
 
             if (activeTab === 'dashboard') {
-                // 生日倒數邏輯：抓取群組成員
+                // 生日排序與好友暱稱功能
                 const { data: members } = await _supabase.from('group_members').select('*, profiles(*)');
-                
-                // 計算倒數天數並排序
                 const sorted = (members || []).map(m => ({
                     ...m,
-                    days: calculateDays(m.profiles.birthday)
+                    days: calculateDays(m.profiles?.birthday)
                 })).sort((a, b) => a.days - b.days);
 
                 container.innerHTML = `
-                    <h2 class="text-2xl font-black mb-6">🎂 好友生日倒數</h2>
+                    <h2 class="text-2xl font-black mb-6 flex items-center gap-2">🎂 生日倒數 <span class="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">依序排列</span></h2>
                     <div class="space-y-4">
-                        ${sorted.map(m => `
-                            <div class="bg-white p-6 rounded-[2rem] shadow-sm flex justify-between items-center border">
+                        ${sorted.length ? sorted.map(m => `
+                            <div class="bg-white p-6 rounded-[2.2rem] shadow-sm border border-slate-100 flex justify-between items-center">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center font-black text-indigo-600">
-                                        ${(m.nickname || m.profiles.username || '?')[0]}
-                                    </div>
+                                    <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-black">${(m.nickname || m.profiles?.username || '?')[0]}</div>
                                     <div>
                                         <div class="flex items-center gap-2">
-                                            <p class="font-bold">${m.nickname || m.profiles.username}</p>
-                                            <button onclick="changeNickname('${m.id}')" class="opacity-30"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
+                                            <p class="font-bold text-slate-800">${m.nickname || m.profiles?.username || '新朋友'}</p>
+                                            <button onclick="editFriendNickname('${m.id}', '${m.nickname || ''}')" class="p-1 text-slate-300 hover:text-indigo-600"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
                                         </div>
-                                        <p class="text-[10px] text-slate-400">生日：${m.profiles.birthday || '未設定'}</p>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${m.profiles?.birthday || '尚未設定生日'}</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-xl font-black text-indigo-600">${m.days} <span class="text-xs">天</span></p>
+                                    <p class="text-2xl font-black text-indigo-600">${m.days}<span class="text-[10px] ml-1 opacity-40">天</span></p>
                                 </div>
                             </div>
-                        `).join('')}
+                        `).join('') : '<p class="text-center py-10 text-slate-300 italic">目前沒有群組好友</p>'}
                     </div>
                 `;
-            } else if (activeTab === 'gifts') {
-                const { data: gifts } = await _supabase.from('gifts').select('*');
+            } else if (activeTab === 'settings') {
+                // 完善個人設定功能
+                const { data: profile } = await _supabase.from('profiles').select('*').eq('id', currentUser.id).single();
                 container.innerHTML = `
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-black">🎁 清單</h2>
+                    <h2 class="text-2xl font-black mb-8">個人設定</h2>
+                    <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase">顯示名稱</label>
+                            <input type="text" id="set-username" value="${profile?.username || ''}" class="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase">我的生日</label>
+                            <input type="date" id="set-birthday" value="${profile?.birthday || ''}" class="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold">
+                        </div>
+                        <button onclick="updateProfile()" class="w-full py-5 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg">儲存變更</button>
                     </div>
-                    <div class="grid grid-cols-1 gap-4">
-                        ${(gifts || []).map(g => `
-                            <div class="bg-white p-5 rounded-[2rem] border flex items-center gap-4 shadow-sm">
-                                <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center overflow-hidden">
-                                    ${g.image_url ? `<img src="${g.image_url}" class="w-full h-full object-cover">` : `<i data-lucide="${g.type==='wishlist'?'heart':'credit-card'}" class="text-slate-200"></i>`}
-                                </div>
-                                <div class="flex-1">
-                                    <p class="font-bold text-slate-800">${g.item_name}</p>
-                                    <p class="text-xs font-bold text-indigo-600">$ ${g.estimated_price}</p>
-                                    <span class="text-[9px] px-2 py-0.5 rounded-full ${g.type==='wishlist'?'bg-rose-50 text-rose-500':'bg-amber-50 text-amber-600'} font-bold mt-1 inline-block">
-                                        ${g.type === 'wishlist' ? '願望' : '代購債務'}
-                                    </span>
-                                </div>
-                            </div>
-                        `).join('')}
+                    <div class="mt-8 p-6 bg-rose-50 rounded-[2rem] border border-rose-100 flex justify-between items-center">
+                        <p class="text-sm font-bold text-rose-600">登出帳號</p>
+                        <button onclick="handleLogout()" class="p-3 bg-white text-rose-600 rounded-xl shadow-sm"><i data-lucide="log-out"></i></button>
                     </div>
                 `;
+            } else if (activeTab === 'groups') {
+                container.innerHTML = `<div class="text-center py-20 text-slate-300 font-bold">群組功能開發中...</div>`;
             }
             lucide.createIcons();
         }
 
-        // 修改暱稱
-        async function changeNickname(memberId) {
-            const newName = prompt("請輸入新的暱稱 (對群組內所有人可見)：");
-            if (!newName) return;
-            const { error } = await _supabase.from('group_members').update({ nickname: newName }).eq('id', memberId);
-            if (!error) renderContent();
-        }
-
-        // 生日計算輔助
+        // 計算倒數天數輔助函數
         function calculateDays(dateStr) {
             if (!dateStr) return 999;
             const today = new Date();
@@ -182,46 +168,66 @@
             return Math.ceil((bday - today) / (1000 * 60 * 60 * 24));
         }
 
-        // 新增資料
-        async function handleSubmit() {
-            const name = document.getElementById('add-name').value;
-            const price = document.getElementById('add-price').value;
-            const group = document.getElementById('add-group').value;
-
-            if (!name) return alert("請輸入項目名稱");
-
-            const { error } = await _supabase.from('gifts').insert([{
-                item_name: name,
-                estimated_price: parseInt(price) || 0,
-                type: currentAddType,
-                group_id: group || null,
-                creator_id: currentUser.id
-            }]);
-
-            if (error) alert(error.message);
-            else { closeModal(); renderContent(); }
+        // 修改好友暱稱 (Messenger 式)
+        async function editFriendNickname(memberId, current) {
+            const n = prompt("輸入新的暱稱 (群組內成員皆可看到)：", current);
+            if (n === null) return;
+            const { error } = await _supabase.from('group_members').update({ nickname: n }).eq('id', memberId);
+            if (!error) renderContent();
         }
 
-        // 下拉選單載入群組
-        async function loadGroupsToSelect() {
-            const { data } = await _supabase.from('groups').select('*');
-            const select = document.getElementById('add-group');
-            if (data) data.forEach(g => {
-                const opt = document.createElement('option');
-                opt.value = g.id; opt.innerText = g.name; select.appendChild(opt);
-            });
+        // 更新個人檔案
+        async function updateProfile() {
+            const username = document.getElementById('set-username').value;
+            const birthday = document.getElementById('set-birthday').value;
+            const { error } = await _supabase.from('profiles').upsert({ id: currentUser.id, username, birthday });
+            if (!error) alert("更新成功！");
+            else alert(error.message);
+        }
+
+        // 資料操作與 UI 切換輔助
+        function switchTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('nav button').forEach(b => b.classList.add('opacity-40'));
+            document.getElementById('nav-' + tab).classList.remove('opacity-40');
+            renderContent();
         }
 
         function setAddType(type) {
             currentAddType = type;
             const isWish = type === 'wishlist';
-            document.getElementById('btn-wishlist').className = isWish ? 'flex-1 py-3 rounded-xl font-bold text-sm bg-indigo-600 text-white' : 'flex-1 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-400';
-            document.getElementById('btn-debt').className = !isWish ? 'flex-1 py-3 rounded-xl font-bold text-sm bg-indigo-600 text-white' : 'flex-1 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-400';
+            document.getElementById('type-wish').className = isWish ? 'flex-1 py-3 rounded-xl text-xs font-bold bg-white shadow-sm text-indigo-600' : 'flex-1 py-3 rounded-xl text-xs font-bold text-slate-400';
+            document.getElementById('type-debt').className = !isWish ? 'flex-1 py-3 rounded-xl text-xs font-bold bg-white shadow-sm text-indigo-600' : 'flex-1 py-3 rounded-xl text-xs font-bold text-slate-400';
         }
 
-        function switchTab(tab) { activeTab = tab; renderContent(); }
+        async function handleSubmit() {
+            const item_name = document.getElementById('add-name').value;
+            const amount = document.getElementById('add-amount').value;
+            const group_id = document.getElementById('add-group-id').value;
+            const image_url = document.getElementById('add-image-url').value;
+
+            if (!item_name) return alert("請輸入項目名稱");
+
+            const { error } = await _supabase.from('gifts').insert([{
+                item_name, amount: parseInt(amount) || 0, type: currentAddType, group_id: group_id || null, image_url, creator_id: currentUser.id
+            }]);
+
+            if (error) alert(error.message);
+            else { closeModal(); switchTab('gifts'); }
+        }
+
+        async function loadGroupsToSelect() {
+            const { data } = await _supabase.from('groups').select('*');
+            const select = document.getElementById('add-group-id');
+            if (data && select) {
+                select.innerHTML = '<option value="">選擇群組 (公開)</option>';
+                data.forEach(g => select.innerHTML += `<option value="${g.id}">${g.name}</option>`);
+            }
+        }
+
         function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('add-modal').classList.add('hidden'); }
+
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -229,12 +235,10 @@
             const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
             if (error) {
                 await _supabase.auth.signUp({ email, password });
-                alert("已嘗試註冊，請檢查 Email 或直接重新嘗試登入。");
-            } else {
-                currentUser = data.user;
-                showApp();
-            }
+                alert("嘗試註冊成功，請檢查信箱或直接重登。");
+            } else { currentUser = data.user; showApp(); }
         };
+
         async function handleLogout() { await _supabase.auth.signOut(); window.location.reload(); }
     </script>
 </body>
