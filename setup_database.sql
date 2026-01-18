@@ -1,115 +1,184 @@
--- 1. 徹底清理 (Reset)
--- 注意：這會清空所有現有資料，確保結構乾淨
-DROP TABLE IF EXISTS public.ledgers CASCADE;
-DROP TABLE IF EXISTS public.gifts CASCADE;
-DROP TABLE IF EXISTS public.group_members CASCADE;
-DROP TABLE IF EXISTS public.groups CASCADE;
-DROP TABLE IF EXISTS public.profiles CASCADE;
+-- 1. 建立擴充功能 (UUID 支援)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. 個人檔案 (Profiles)
-CREATE TABLE public.profiles (
-    id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
-    username TEXT,
-    birthday DATE,
-    avatar_url TEXT,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- 2. 建立 Profiles 表格 (包含銀行與生日資訊)
+-- 使用 IF NOT EXISTS 防止重複建立錯誤
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  username TEXT,
+  birthday DATE,
+  avatar_url TEXT,
+  bank_code TEXT, -- 銀行代碼 (例如：822)
+  bank_account TEXT, -- 銀行帳號
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. 群組系統 (Groups)
-CREATE TABLE public.groups (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name TEXT NOT NULL,
-    invite_code TEXT UNIQUE DEFAULT substring(md5(random()::text) from 1 for 6), -- 自動生成 6 碼
-    creator_id UUID REFERENCES auth.users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- 3. 建立 Groups 表格 (包含自動生成邀請碼機制)
+CREATE TABLE IF NOT EXISTS public.groups (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name TEXT NOT NULL,
+  invite_code TEXT UNIQUE NOT NULL, -- 6碼大寫邀請碼
+  creator_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. 群組成員 (Members)
-CREATE TABLE public.group_members (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    nickname TEXT,
-    role TEXT DEFAULT 'member', 
-    joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(group_id, user_id)
+-- 4. 建立 Group Members 表格
+CREATE TABLE IF NOT EXISTS public.group_members (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  role TEXT DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+  nickname TEXT,
+  joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(group_id, user_id)
 );
 
--- 5. 禮物/願望 (Gifts)
-CREATE TABLE public.gifts (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE NOT NULL,
-    creator_id UUID REFERENCES auth.users(id) NOT NULL,
-    item_name TEXT NOT NULL,
-    amount INTEGER DEFAULT 0,
-    priority TEXT DEFAULT 'normal' CHECK (priority IN ('high', 'normal', 'low')),
-    is_reserved BOOLEAN DEFAULT FALSE,
-    reserved_by UUID REFERENCES auth.users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- 5. 建立 Ledgers 表格 (帳務管理)
+CREATE TABLE IF NOT EXISTS public.ledgers (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
+  creditor_id UUID REFERENCES public.profiles(id), -- 債權人
+  debtor_id UUID REFERENCES public.profiles(id),   -- 債務人
+  amount INTEGER NOT NULL CHECK (amount > 0),
+  description TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'settling', 'settled')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 6. 嚴謹帳務 (Ledgers)
-CREATE TABLE public.ledgers (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE NOT NULL,
-    creditor_id UUID REFERENCES auth.users(id) NOT NULL, -- 收款人
-    debtor_id UUID REFERENCES auth.users(id) NOT NULL,   -- 付款人
-    amount INTEGER NOT NULL CHECK (amount > 0),
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'settled')),
-    description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- 6. 建立 Gifts 表格 (願望清單)
+CREATE TABLE IF NOT EXISTS public.gifts (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
+  creator_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  item_name TEXT NOT NULL,
+  amount INTEGER DEFAULT 0,
+  priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high')),
+  is_reserved BOOLEAN DEFAULT FALSE,
+  reserved_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 7. 啟用 RLS 安全防護
+-- 7. 啟動 Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.gifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ledgers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.gifts ENABLE ROW LEVEL SECURITY;
 
--- 8. 設定權限政策 (Policies)
+-- 8. RLS 策略設定 (先刪除舊有的以防衝突)
 
--- Profiles: 公開讀取 (顯示名字用)，自己可改
-CREATE POLICY "Public profiles" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Insert profile" ON public.profiles FOR INSERT WITH CHECK (true);
+-- Profiles
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
--- Groups: 群組成員可見，創建者可見
-CREATE POLICY "View groups" ON public.groups FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.group_members WHERE group_id = id AND user_id = auth.uid()) OR
-    auth.uid() = creator_id
+-- Groups
+DROP POLICY IF EXISTS "Group members can view group" ON public.groups;
+CREATE POLICY "Group members can view group" ON public.groups FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.group_members WHERE group_id = public.groups.id AND user_id = auth.uid())
 );
-CREATE POLICY "Create groups" ON public.groups FOR INSERT WITH CHECK (auth.uid() = creator_id);
+DROP POLICY IF EXISTS "Anyone can create a group" ON public.groups;
+CREATE POLICY "Anyone can create a group" ON public.groups FOR INSERT WITH CHECK (auth.uid() = creator_id);
 
--- Members: 同群組可見，允許加入
-CREATE POLICY "View members" ON public.group_members FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.group_members gm WHERE gm.group_id = group_id AND gm.user_id = auth.uid())
+-- Group Members
+DROP POLICY IF EXISTS "Members can view group fellows" ON public.group_members;
+CREATE POLICY "Members can view group fellows" ON public.group_members FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.group_members gm WHERE gm.group_id = public.group_members.group_id AND gm.user_id = auth.uid())
 );
-CREATE POLICY "Join groups" ON public.group_members FOR INSERT WITH CHECK (true);
-
--- Gifts: 僅同群組成員可見
-CREATE POLICY "Group isolation for gifts" ON public.gifts FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.group_members WHERE group_id = gifts.group_id AND user_id = auth.uid())
-);
-
--- Ledgers: **隱私修正版** (僅交易雙方可見，其他人不可見)
-CREATE POLICY "Private ledgers" ON public.ledgers FOR ALL USING (
-    auth.uid() = creditor_id OR auth.uid() = debtor_id
+DROP POLICY IF EXISTS "Group management policy" ON public.group_members;
+CREATE POLICY "Group management policy" ON public.group_members FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.group_members WHERE group_id = public.group_members.group_id AND user_id = auth.uid())
 );
 
--- 9. 效能優化 (Indexes)
-CREATE INDEX idx_gifts_created_at ON public.gifts(created_at DESC);
-CREATE INDEX idx_ledgers_created_at ON public.ledgers(created_at DESC);
-CREATE INDEX idx_members_group_user ON public.group_members(group_id, user_id);
+-- Ledgers
+DROP POLICY IF EXISTS "Group visible ledgers" ON public.ledgers;
+CREATE POLICY "Group visible ledgers" ON public.ledgers FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.group_members WHERE group_id = public.ledgers.group_id AND user_id = auth.uid())
+);
+DROP POLICY IF EXISTS "Involved parties can update ledgers" ON public.ledgers;
+CREATE POLICY "Involved parties can update ledgers" ON public.ledgers FOR UPDATE USING (
+  auth.uid() = creditor_id OR auth.uid() = debtor_id
+);
+DROP POLICY IF EXISTS "Members can insert ledgers" ON public.ledgers;
+CREATE POLICY "Members can insert ledgers" ON public.ledgers FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM public.group_members WHERE group_id = public.ledgers.group_id AND user_id = auth.uid())
+);
 
--- 10. 自動化 Trigger (註冊自動建檔)
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+-- Gifts
+DROP POLICY IF EXISTS "Group visible gifts" ON public.gifts;
+CREATE POLICY "Group visible gifts" ON public.gifts FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.group_members WHERE group_id = public.gifts.group_id AND user_id = auth.uid())
+);
+DROP POLICY IF EXISTS "Members can manage gifts" ON public.gifts;
+CREATE POLICY "Members can manage gifts" ON public.gifts FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.group_members WHERE group_id = public.gifts.group_id AND user_id = auth.uid())
+);
+
+-- 9. 輔助函數：自動生成邀請碼
+CREATE OR REPLACE FUNCTION generate_invite_code() RETURNS TEXT AS $$
+DECLARE
+  chars TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  result TEXT := '';
+  i INTEGER := 0;
+BEGIN
+  FOR i IN 1..6 LOOP
+    result := result || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
+  END LOOP;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 10. 觸發器：建立群組時自動生成邀請碼
+CREATE OR REPLACE FUNCTION public.set_invite_code() 
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username) VALUES (new.id, new.email);
+  IF NEW.invite_code IS NULL THEN
+    NEW.invite_code := generate_invite_code();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_set_invite_code ON public.groups;
+CREATE TRIGGER trigger_set_invite_code
+BEFORE INSERT ON public.groups
+FOR EACH ROW EXECUTE FUNCTION public.set_invite_code();
+
+-- 11. 觸發器：Auth Signup 時自動建立 Profile
+CREATE OR REPLACE FUNCTION public.handle_new_user() 
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, avatar_url)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'username', NEW.raw_user_meta_data->>'avatar_url');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 12. 關鍵 RPC 函數：透過邀請碼加入群組
+CREATE OR REPLACE FUNCTION public.join_group_by_invite(code TEXT)
+RETURNS UUID AS $$
+DECLARE
+  target_group_id UUID;
+BEGIN
+  SELECT id INTO target_group_id FROM public.groups WHERE invite_code = UPPER(code);
+  
+  IF target_group_id IS NULL THEN
+    RAISE EXCEPTION '邀請碼無效';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.group_members WHERE group_id = target_group_id AND user_id = auth.uid()) THEN
+    RETURN target_group_id;
+  END IF;
+
+  INSERT INTO public.group_members (group_id, user_id)
+  VALUES (target_group_id, auth.uid());
+
+  RETURN target_group_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
