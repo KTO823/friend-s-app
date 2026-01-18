@@ -3,82 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <title>GIFTFLOW</title>
+    <title>GIFTFLOW | 神奇好友禮物 App</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5', // Indigo-600
+                        secondary: '#F8FAFC', // Slate-50
+                        success: '#10B981', // Emerald-500
+                        danger: '#F43F5E', // Rose-500
+                        glass: 'rgba(255, 255, 255, 0.95)',
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #F8FAFC; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
+        
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            background-color: #F8FAFC;
+        }
         
         /* 玻璃擬態與安全區 */
-        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid rgba(0,0,0,0.05); }
-        .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 20px); }
+        .glass-nav { 
+            background: rgba(255, 255, 255, 0.90); 
+            backdrop-filter: blur(16px); 
+            border-top: 1px solid rgba(255,255,255,0.5); 
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+        }
+        .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 16px); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
 
-        /* 彈窗絕對置中設定 */
-        .modal-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; transition: opacity 0.2s; opacity: 0; pointer-events: none; }
+        /* 動畫設定 */
+        .transition-all-200 { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .scale-active:active { transform: scale(0.96); }
+        
+        /* 彈窗動畫 */
+        .modal-overlay { 
+            position: fixed; inset: 0; z-index: 60; 
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); 
+            display: flex; align-items: center; justify-content: center; padding: 20px; 
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
         .modal-overlay.open { opacity: 1; pointer-events: auto; }
-        .modal-content { background: white; width: 100%; max-width: 360px; border-radius: 40px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: scale(0.95); transition: transform 0.2s; }
-        .modal-overlay.open .modal-content { transform: scale(1); }
+        
+        .modal-content { 
+            background: white; width: 100%; max-width: 380px; 
+            border-radius: 32px; padding: 24px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); 
+            transform: scale(0.95) translateY(10px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
+        }
+        .modal-overlay.open .modal-content { transform: scale(1) translateY(0); }
 
-        /* 輸入框優化 (防止 iOS 放大) */
-        input, select { font-size: 16px !important; }
-        .input-box { width: 100%; padding: 16px; background-color: #F1F5F9; border-radius: 20px; border: 2px solid transparent; outline: none; font-weight: bold; color: #334155; transition: all 0.2s; }
-        .input-box:focus { background-color: white; border-color: #6366F1; }
+        /* 輸入框樣式 */
+        input, select { font-size: 16px !important; } /* 防止 iOS 縮放 */
+        .input-box { 
+            width: 100%; padding: 16px; 
+            background-color: #F1F5F9; border-radius: 20px; 
+            border: 2px solid transparent; outline: none; 
+            font-weight: 500; color: #334155; transition: all 0.2s; 
+        }
+        .input-box:focus { background-color: white; border-color: #4F46E5; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+        .label-text { font-size: 0.75rem; font-weight: 700; color: #94A3B8; margin-bottom: 0.5rem; display: block; margin-left: 0.5rem; }
 
         /* 按鈕樣式 */
-        .btn-primary { width: 100%; padding: 18px; background-color: #4F46E5; color: white; font-weight: 900; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4); transition: transform 0.1s; }
-        .btn-primary:active { transform: scale(0.96); }
-        .btn-secondary { width: 100%; padding: 18px; background-color: white; color: #4F46E5; font-weight: 900; border-radius: 24px; border: 2px solid #F1F5F9; transition: transform 0.1s; }
-        .btn-secondary:active { transform: scale(0.96); }
+        .btn-primary { 
+            width: 100%; padding: 16px; 
+            background-color: #4F46E5; color: white; 
+            font-weight: 700; border-radius: 20px; 
+            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4); 
+            display: flex; justify-content: center; items-center; gap: 8px;
+        }
+        .btn-secondary { 
+            width: 100%; padding: 16px; 
+            background-color: white; color: #4F46E5; 
+            font-weight: 700; border-radius: 20px; 
+            border: 2px solid #EEF2FF; 
+        }
 
-        /* 底部導航選中態 */
-        .nav-btn { opacity: 0.4; transition: opacity 0.2s; }
-        .nav-btn.active { opacity: 1; color: #4F46E5; }
+        /* Loading Spinner */
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid white; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden text-slate-800">
 
-    <div id="login-screen" class="fixed inset-0 z-50 bg-[#F8FAFC] flex flex-col items-center justify-center p-6 transition-opacity duration-300">
-        <div class="w-full max-w-sm bg-white rounded-[40px] shadow-2xl p-10 text-center">
-            <div class="inline-block p-5 bg-indigo-50 rounded-3xl text-indigo-600 mb-8">
-                <i data-lucide="gift" class="w-12 h-12"></i>
+    <div id="login-screen" class="fixed inset-0 z-50 bg-[#F8FAFC] flex flex-col items-center justify-center p-6 transition-all duration-500">
+        <div class="w-full max-w-sm bg-white rounded-[40px] shadow-2xl shadow-indigo-100 p-10 text-center border border-white">
+            <div class="inline-flex p-5 bg-indigo-50 rounded-[28px] text-indigo-600 mb-8 shadow-inner">
+                <i data-lucide="gift" class="w-12 h-12 stroke-[1.5]"></i>
             </div>
-            <h1 class="text-2xl font-black text-slate-800 mb-2">神奇好友禮物 App</h1>
-            <p class="text-sm text-slate-400 mb-10 font-bold">輸入 Email 即可登入或自動註冊</p>
-            <form id="auth-form" class="space-y-4">
-                <input type="email" id="email" placeholder="Email" class="input-box">
-                <input type="password" id="password" placeholder="Password" class="input-box">
+            <h1 class="text-3xl font-black text-slate-800 mb-2 tracking-tight">GIFTFLOW</h1>
+            <p class="text-sm text-slate-400 mb-10 font-bold">好友間的禮物許願與分帳工具</p>
+            
+            <form id="auth-form" class="space-y-4" onsubmit="return false;">
+                <div class="space-y-1 text-left">
+                    <input type="email" id="email" placeholder="輸入 Email" class="input-box">
+                </div>
+                <div class="space-y-1 text-left">
+                    <input type="password" id="password" placeholder="輸入密碼" class="input-box">
+                </div>
                 <div class="pt-4 flex gap-3">
-                    <button type="button" onclick="handleAuth('login')" class="btn-primary">登入</button>
-                    <button type="button" onclick="handleAuth('signup')" class="btn-secondary">註冊</button>
+                    <button type="button" onclick="handleAuth('login')" class="btn-primary scale-active flex-1">登入</button>
+                    <button type="button" onclick="handleAuth('signup')" class="btn-secondary scale-active flex-1">註冊</button>
                 </div>
             </form>
         </div>
+        <p class="absolute bottom-10 text-xs font-bold text-slate-300">Designed for Friends</p>
     </div>
 
-    <div id="main-app" class="hidden flex-1 flex flex-col h-full">
-        <header class="px-6 py-5 bg-[#F8FAFC] flex justify-between items-center sticky top-0 z-10">
-            <h1 class="text-xl font-black italic text-slate-900 tracking-tighter">GIFT<span class="text-indigo-600">FLOW</span></h1>
-            <button onclick="handleLogout()" class="text-xs font-bold text-slate-400 bg-white px-3 py-1.5 rounded-full shadow-sm">登出</button>
+    <div id="main-app" class="hidden flex-1 flex flex-col h-full opacity-0 transition-opacity duration-300">
+        <header class="px-6 py-5 bg-[#F8FAFC]/90 backdrop-blur-sm flex justify-between items-center sticky top-0 z-10">
+            <h1 class="text-xl font-black italic text-slate-900 tracking-tighter flex items-center gap-1">
+                GIFT<span class="text-indigo-600">FLOW</span>
+            </h1>
+            <button onclick="handleLogout()" class="text-xs font-bold text-slate-400 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100 scale-active">登出</button>
         </header>
 
-        <main id="content" class="flex-1 overflow-y-auto px-6 pb-32 hide-scrollbar space-y-6">
+        <main id="content" class="flex-1 overflow-y-auto px-6 pb-32 hide-scrollbar space-y-6 scroll-smooth">
             </main>
 
-        <nav class="glass fixed bottom-0 w-full z-20 px-8 pt-4 safe-bottom flex justify-between items-end">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex flex-col items-center gap-1 active"><i data-lucide="layout-grid" class="w-6 h-6"></i><span class="text-[10px] font-bold">總覽</span></button>
-            <button onclick="switchTab('gifts')" id="nav-gifts" class="nav-btn flex flex-col items-center gap-1"><i data-lucide="gift" class="w-6 h-6"></i><span class="text-[10px] font-bold">禮物</span></button>
+        <nav class="glass-nav fixed bottom-0 w-full z-20 px-6 pt-2 safe-bottom flex justify-between items-end">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="group flex flex-col items-center gap-1 w-16 p-2 rounded-2xl transition-all">
+                <div class="p-1 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                    <i data-lucide="layout-grid" class="w-6 h-6 text-slate-300 transition-colors nav-icon"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-300 nav-text">總覽</span>
+            </button>
+
+            <button onclick="switchTab('gifts')" id="nav-gifts" class="group flex flex-col items-center gap-1 w-16 p-2 rounded-2xl transition-all">
+                <div class="p-1 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                    <i data-lucide="gift" class="w-6 h-6 text-slate-300 transition-colors nav-icon"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-300 nav-text">禮物</span>
+            </button>
             
-            <div class="relative -top-8">
-                <button onclick="openAddModal()" class="w-16 h-16 bg-indigo-600 rounded-full shadow-xl shadow-indigo-300 flex items-center justify-center text-white border-4 border-[#F8FAFC] active:scale-95 transition-transform">
-                    <i data-lucide="plus" class="w-8 h-8"></i>
+            <div class="relative -top-6">
+                <button onclick="openAddModal()" class="w-16 h-16 bg-indigo-600 rounded-[24px] shadow-lg shadow-indigo-300 flex items-center justify-center text-white border-[6px] border-[#F8FAFC] scale-active transition-transform hover:rotate-90 duration-300">
+                    <i data-lucide="plus" class="w-8 h-8 stroke-[3]"></i>
                 </button>
             </div>
 
-            <button onclick="switchTab('ledgers')" id="nav-ledgers" class="nav-btn flex flex-col items-center gap-1"><i data-lucide="credit-card" class="w-6 h-6"></i><span class="text-[10px] font-bold">帳務</span></button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center gap-1"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] font-bold">我的</span></button>
+            <button onclick="switchTab('ledgers')" id="nav-ledgers" class="group flex flex-col items-center gap-1 w-16 p-2 rounded-2xl transition-all">
+                <div class="p-1 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                    <i data-lucide="credit-card" class="w-6 h-6 text-slate-300 transition-colors nav-icon"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-300 nav-text">帳務</span>
+            </button>
+            
+            <button onclick="switchTab('settings')" id="nav-settings" class="group flex flex-col items-center gap-1 w-16 p-2 rounded-2xl transition-all">
+                <div class="p-1 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                    <i data-lucide="user" class="w-6 h-6 text-slate-300 transition-colors nav-icon"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-300 nav-text">我的</span>
+            </button>
         </nav>
     </div>
 
@@ -86,33 +177,80 @@
         <div class="modal-content">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-black text-slate-800">新增項目</h2>
-                <button onclick="closeModal()" class="p-2 bg-slate-100 rounded-full text-slate-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeModal('add-modal')" class="p-2 bg-slate-50 rounded-full text-slate-400 hover:bg-slate-100 scale-active"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <div class="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
-                <button onclick="setAddType('wishlist')" id="type-wish" class="flex-1 py-3 rounded-xl text-xs font-bold bg-white text-indigo-600 shadow-sm transition-all">🎁 願望</button>
-                <button onclick="setAddType('debt')" id="type-debt" class="flex-1 py-3 rounded-xl text-xs font-bold text-slate-400 transition-all">💸 記帳</button>
+            <div class="flex bg-slate-100 p-1.5 rounded-2xl mb-6 relative">
+                <div id="type-indicator" class="absolute left-1.5 top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white rounded-xl shadow-sm transition-transform duration-300"></div>
+                <button onclick="setAddType('wishlist')" class="flex-1 relative z-10 py-3 text-xs font-bold transition-colors duration-300 text-center" id="btn-type-wish">🎁 願望清單</button>
+                <button onclick="setAddType('debt')" class="flex-1 relative z-10 py-3 text-xs font-bold transition-colors duration-300 text-center" id="btn-type-debt">💸 帳務紀錄</button>
             </div>
 
             <div class="space-y-4">
-                <input type="text" id="add-name" placeholder="名稱 (例如: AirPods)" class="input-box">
-                <div class="flex gap-3">
-                    <input type="number" id="add-amount" placeholder="金額" class="input-box">
-                    <select id="add-group-id" class="input-box text-indigo-600 bg-indigo-50 border-indigo-100" style="width: 140px;"></select>
+                <div>
+                    <span class="label-text">項目名稱</span>
+                    <input type="text" id="add-name" placeholder="例如: 晚餐費、AirPods" class="input-box">
                 </div>
                 
-                <div id="debt-options" class="hidden">
-                    <p class="text-xs font-bold text-slate-400 mb-2 ml-2">借貸對象</p>
-                    <select id="add-target-member" class="input-box"></select>
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <span class="label-text">金額</span>
+                        <input type="number" id="add-amount" placeholder="0" class="input-box">
+                    </div>
+                    <div class="w-[140px]">
+                        <span class="label-text">所屬群組</span>
+                        <select id="add-group-id" class="input-box text-indigo-600 bg-indigo-50/50 border-indigo-100/50" onchange="handleGroupChange(this.value)"></select>
+                    </div>
+                </div>
+                
+                <div id="debt-options" class="hidden transition-all duration-300 overflow-hidden" style="max-height: 0px;">
+                    <span class="label-text text-rose-500">此筆費用是誰欠你？</span>
+                    <select id="add-target-member" class="input-box border-rose-100 bg-rose-50 text-rose-600 focus:border-rose-500 focus:shadow-rose-100"></select>
                 </div>
 
-                <button onclick="handleSubmit()" class="btn-primary mt-2">發佈</button>
+                <button onclick="handleSubmit()" id="submit-btn" class="btn-primary mt-4 scale-active">
+                    <span>立即發佈</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-black text-slate-800">編輯個人資料</h2>
+                <button onclick="closeModal('profile-modal')" class="p-2 bg-slate-50 rounded-full text-slate-400 hover:bg-slate-100 scale-active"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <span class="label-text">顯示暱稱</span>
+                    <input type="text" id="edit-username" class="input-box">
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-1/3">
+                        <span class="label-text">銀行代碼</span>
+                        <input type="text" id="edit-bank-code" placeholder="822" class="input-box text-center">
+                    </div>
+                    <div class="flex-1">
+                        <span class="label-text">銀行帳號</span>
+                        <input type="text" id="edit-bank-account" placeholder="帳號" class="input-box">
+                    </div>
+                </div>
+                <div>
+                    <span class="label-text">生日</span>
+                    <input type="date" id="edit-birthday" class="input-box">
+                </div>
+
+                <button onclick="saveProfile()" class="btn-primary mt-4 scale-active">儲存變更</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 設定 Supabase
+        // ==========================================
+        // 初始化設定
+        // ==========================================
         const supabaseUrl = 'https://kzzxyyykpiquanxtfkwr.supabase.co'; 
         const supabaseKey = 'sb_publishable_K0ThQ9_ZqPPYk0sxxWgLhg_qwzuMNeG'; 
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -121,86 +259,151 @@
         let activeTab = 'dashboard';
         let currentAddType = 'wishlist';
 
-        // 1. 初始化
+        // 啟動應用
         window.onload = async () => {
             const { data: { session } } = await _supabase.auth.getSession();
             if (session) { 
                 currentUser = session.user; 
                 showApp(); 
+            } else {
+                document.getElementById('login-screen').classList.remove('opacity-0', 'pointer-events-none');
             }
             lucide.createIcons();
         };
 
-        // 2. 登入/註冊
+        // ==========================================
+        // 認證邏輯
+        // ==========================================
         async function handleAuth(type) {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            if (!email || !password) return alert("請輸入 Email 與密碼");
+            if (!email || !password) return showToast("請輸入 Email 與密碼", "error");
 
             let res;
-            if (type === 'login') res = await _supabase.auth.signInWithPassword({ email, password });
-            else res = await _supabase.auth.signUp({ email, password });
+            const btn = type === 'login' ? document.querySelectorAll('.btn-primary')[0] : document.querySelectorAll('.btn-secondary')[0];
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner"></div>'; // Loading 效果
 
-            if (res.error) alert(res.error.message);
-            else { 
-                if(type==='signup') alert("註冊成功，已自動登入");
+            try {
+                if (type === 'login') res = await _supabase.auth.signInWithPassword({ email, password });
+                else res = await _supabase.auth.signUp({ email, password });
+
+                if (res.error) throw res.error;
+                
+                if (type === 'signup') showToast("註冊成功，已自動登入", "success");
                 currentUser = res.data.user; 
-                showApp(); 
+                showApp();
+            } catch (error) {
+                showToast(error.message, "error");
+            } finally {
+                btn.innerHTML = originalText;
             }
         }
 
         function showApp() {
-            document.getElementById('login-screen').classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('main-app').classList.remove('hidden');
-            renderContent();
+            const loginScreen = document.getElementById('login-screen');
+            const mainApp = document.getElementById('main-app');
+            
+            loginScreen.classList.add('opacity-0', 'pointer-events-none');
+            // 延遲顯示主畫面以產生轉場
+            setTimeout(() => {
+                loginScreen.style.display = 'none';
+                mainApp.classList.remove('hidden');
+                setTimeout(() => mainApp.classList.remove('opacity-0'), 50);
+            }, 300);
+
+            switchTab('dashboard'); // 預設載入 Dashboard
             loadGroupsToSelect();
         }
 
-        // 3. 頁面渲染 (保留您喜歡的風格)
+        async function handleLogout() {
+            await _supabase.auth.signOut();
+            window.location.reload();
+        }
+
+        // ==========================================
+        // 頁面渲染邏輯 (核心)
+        // ==========================================
         async function renderContent() {
             const container = document.getElementById('content');
-            // 清空內容，避免閃爍特效，改為簡單的文字
-            container.innerHTML = '';
+            // 簡單 Loading
+            container.innerHTML = '<div class="flex justify-center py-20"><div class="spinner border-indigo-200 border-t-indigo-600"></div></div>';
 
             if (activeTab === 'dashboard') {
-                // 讀取資料
                 const { data: profile } = await _supabase.from('profiles').select('*').eq('id', currentUser.id).single();
                 
-                // 紫色卡片 (還原您喜歡的設計)
                 container.innerHTML = `
-                    <div class="bg-[#4F46E5] p-8 rounded-[40px] text-white shadow-xl shadow-indigo-200 mb-6">
-                        <p class="text-[10px] font-black tracking-widest uppercase opacity-60 mb-1">WELCOME BACK</p>
-                        <h2 class="text-2xl font-black">${profile?.username || currentUser.email.split('@')[0]}</h2>
-                        <p class="text-xs font-bold opacity-80 mt-2">${currentUser.email}</p>
+                    <div class="bg-gradient-to-br from-[#4F46E5] to-[#4338ca] p-8 rounded-[40px] text-white shadow-xl shadow-indigo-200 mb-6 relative overflow-hidden">
+                        <div class="absolute -right-10 -top-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
+                        <p class="text-[10px] font-black tracking-[0.2em] uppercase opacity-60 mb-2">Welcome Back</p>
+                        <h2 class="text-3xl font-black mb-1">${profile?.username || currentUser.email.split('@')[0]}</h2>
+                        <p class="text-xs font-medium opacity-80">${currentUser.email}</p>
                     </div>
                     
-                    <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 text-center">
-                        <div class="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500">
-                            <i data-lucide="cloud" class="w-6 h-6"></i>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
+                            <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mb-3 text-emerald-500">
+                                <i data-lucide="wifi" class="w-5 h-5"></i>
+                            </div>
+                            <p class="text-slate-800 font-bold text-sm">連線正常</p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-1">資料同步中</p>
                         </div>
-                        <p class="text-slate-800 font-black text-lg">雲端連線正常</p>
-                        <p class="text-xs text-slate-400 font-bold mt-2">資料已同步至最新狀態</p>
+                        <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
+                            <div class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center mb-3 text-indigo-500">
+                                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                            </div>
+                            <p class="text-slate-800 font-bold text-sm">帳戶安全</p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-1">已啟用保護</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="text-xs font-black text-slate-300 uppercase mb-4 pl-2">System Status</h3>
+                        <div class="bg-white p-5 rounded-[24px] border border-slate-100 flex items-center gap-4">
+                            <div class="p-3 bg-slate-50 rounded-xl text-slate-400"><i data-lucide="database" class="w-5 h-5"></i></div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-700">資料庫連線</p>
+                                <p class="text-xs text-slate-400">Supabase Region: Tokyo</p>
+                            </div>
+                            <div class="ml-auto w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)]"></div>
+                        </div>
                     </div>
                 `;
 
             } else if (activeTab === 'gifts') {
-                const { data } = await _supabase.from('gifts').select('*').order('created_at', { ascending: false });
+                const { data } = await _supabase.from('gifts').select('*, profiles:creator_id(username)').order('created_at', { ascending: false });
                 
-                let html = `<h2 class="text-2xl font-black mb-6 pl-2">禮物清單</h2>`;
+                let html = `<div class="flex items-end justify-between mb-6 px-2"><h2 class="text-2xl font-black text-slate-800">許願池</h2><span class="text-xs font-bold text-slate-400 bg-white px-3 py-1 rounded-full shadow-sm">${data?.length || 0} 個願望</span></div>`;
+                
                 if (!data || data.length === 0) {
-                    html += `<div class="text-center py-20 opacity-30 font-bold text-slate-400">目前沒有禮物，點擊＋新增一個吧！</div>`;
+                    html += `
+                        <div class="text-center py-20 flex flex-col items-center">
+                            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-4"><i data-lucide="gift" class="w-8 h-8"></i></div>
+                            <p class="font-bold text-slate-400">目前沒有願望</p>
+                            <p class="text-xs text-slate-300 mt-2">點擊下方 ＋ 新增你的第一個願望</p>
+                        </div>`;
                 } else {
-                    html += `<div class="space-y-4">`;
+                    html += `<div class="space-y-4 pb-20">`;
                     data.forEach(g => {
+                        const isReserved = g.is_reserved;
                         html += `
-                        <div class="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm flex justify-between items-center">
-                            <div>
-                                <p class="font-black text-slate-800 text-lg">${g.item_name}</p>
-                                <p class="text-xs font-bold text-slate-400 mt-1">$${g.amount}</p>
+                        <div class="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm flex justify-between items-center group active:scale-[0.98] transition-transform">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl ${isReserved ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600'} flex items-center justify-center">
+                                    <i data-lucide="gift" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <p class="font-black text-slate-800 text-lg leading-tight">${g.item_name}</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-xs font-bold text-slate-400">$${g.amount}</span>
+                                        <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                        <span class="text-[10px] font-bold text-slate-300">by ${g.profiles?.username || 'Unknown'}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <span class="bg-slate-100 text-slate-500 px-4 py-2 rounded-xl text-xs font-bold">
-                                ${g.is_reserved ? '已被認領' : '等待中'}
-                            </span>
+                            <button onclick="toggleReserve('${g.id}', ${!isReserved})" class="px-4 py-2 rounded-xl text-xs font-bold transition-colors ${isReserved ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'}">
+                                ${isReserved ? '已認領' : '認領'}
+                            </button>
                         </div>`;
                     });
                     html += `</div>`;
@@ -208,27 +411,41 @@
                 container.innerHTML = html;
 
             } else if (activeTab === 'ledgers') {
-                const { data } = await _supabase.from('ledgers').select('*, creditor:profiles!creditor_id(username), debtor:profiles!debtor_id(username)');
+                const { data } = await _supabase.from('ledgers').select('*, creditor:profiles!creditor_id(username), debtor:profiles!debtor_id(username)').order('created_at', { ascending: false });
                 
-                let html = `<h2 class="text-2xl font-black mb-6 pl-2">帳務紀錄</h2>`;
+                let html = `<h2 class="text-2xl font-black text-slate-800 mb-6 pl-2">帳務紀錄</h2>`;
                 if (!data || data.length === 0) {
-                    html += `<div class="text-center py-20 opacity-30 font-bold text-slate-400">沒有欠債紀錄，太棒了！</div>`;
+                    html += `<div class="text-center py-20 opacity-40 font-bold text-slate-400">目前沒有欠債紀錄，太棒了！</div>`;
                 } else {
-                    html += `<div class="space-y-4">`;
+                    html += `<div class="space-y-3 pb-20">`;
                     data.forEach(l => {
-                        const isMeCred = l.creditor_id === currentUser.id;
+                        // 判斷這筆帳對"我"來說是收入還是支出
+                        const isMeCreditor = l.creditor_id === currentUser.id; 
+                        const isMeDebtor = l.debtor_id === currentUser.id;
+                        
+                        // 如果我不相關，顯示灰色；若我借人錢(收入)綠色；若我欠人錢(支出)紅色
+                        let colorClass = 'bg-slate-50 text-slate-400';
+                        let icon = 'minus';
+                        if (isMeCreditor) { colorClass = 'bg-emerald-50 text-emerald-500'; icon = 'arrow-down-left'; }
+                        else if (isMeDebtor) { colorClass = 'bg-rose-50 text-rose-500'; icon = 'arrow-up-right'; }
+
                         html += `
-                        <div class="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm flex justify-between items-center">
+                        <div class="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm flex justify-between items-center">
                             <div class="flex items-center gap-4">
-                                <div class="p-3 rounded-full ${isMeCred ? 'bg-green-50 text-green-500' : 'bg-rose-50 text-rose-500'}">
-                                    <i data-lucide="${isMeCred ? 'arrow-down-left' : 'arrow-up-right'}" class="w-5 h-5"></i>
+                                <div class="p-3.5 rounded-2xl ${colorClass}">
+                                    <i data-lucide="${icon}" class="w-5 h-5"></i>
                                 </div>
                                 <div>
-                                    <p class="text-xs font-bold text-slate-400 mb-1">${l.description}</p>
-                                    <p class="font-black text-slate-800">$${l.amount}</p>
+                                    <p class="font-bold text-slate-700 text-base mb-0.5">${l.description}</p>
+                                    <p class="text-[10px] font-bold text-slate-400">
+                                        ${l.creditor?.username} <span class="text-slate-300">➜</span> ${l.debtor?.username}
+                                    </p>
                                 </div>
                             </div>
-                            <span class="text-xs font-bold text-slate-400">${l.status}</span>
+                            <div class="text-right">
+                                <p class="font-black text-slate-800 text-lg">$${l.amount}</p>
+                                <span class="text-[10px] font-bold ${l.status === 'pending' ? 'text-orange-400' : 'text-slate-300'}">${l.status === 'pending' ? '未結清' : '已結清'}</span>
+                            </div>
                         </div>`;
                     });
                     html += `</div>`;
@@ -236,26 +453,51 @@
                 container.innerHTML = html;
 
             } else if (activeTab === 'settings') {
+                // 讀取個人資料
                 const { data: p } = await _supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-                const { data: g } = await _supabase.from('groups').select('*');
+                const { data: myGroups } = await _supabase.from('group_members').select('group_id, groups(*)').eq('user_id', currentUser.id);
 
                 container.innerHTML = `
                     <div class="text-center mb-8 pt-4">
-                        <div class="w-20 h-20 bg-slate-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg">
-                            <img src="${p?.avatar_url || `https://api.dicebear.com/9.x/avataaars/svg?seed=${currentUser.email}`}" class="w-full h-full object-cover">
+                        <div class="w-24 h-24 bg-slate-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl shadow-indigo-100 relative group">
+                            <img src="${p?.avatar_url || `https://api.dicebear.com/9.x/avataaars/svg?seed=${p?.username || currentUser.email}`}" class="w-full h-full object-cover">
                         </div>
                         <h2 class="text-2xl font-black text-slate-800">${p?.username || 'User'}</h2>
-                        <button onclick="updateProfile()" class="text-xs font-bold text-indigo-500 mt-2">編輯名稱 / 銀行帳號</button>
+                        <div class="flex justify-center gap-2 mt-2">
+                             <span class="px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-bold text-slate-400 tracking-wider">BANK: ${p?.bank_code || '---'}</span>
+                        </div>
+                        
+                        <button onclick="openProfileModal('${p?.username||''}', '${p?.bank_code||''}', '${p?.bank_account||''}', '${p?.birthday||''}')" class="mt-4 px-5 py-2 rounded-full bg-white border border-indigo-100 text-indigo-600 text-xs font-bold shadow-sm active:scale-95 transition-transform">
+                            編輯個人資料
+                        </button>
                     </div>
 
-                    <div class="bg-white p-6 rounded-[40px] shadow-sm border border-slate-100 mb-6">
-                        <h3 class="text-xs font-black text-slate-300 uppercase mb-4 pl-2">My Groups</h3>
-                        <div class="space-y-3 mb-4">
-                            ${g?.length ? g.map(gp => `<div class="flex justify-between items-center p-4 bg-slate-50 rounded-2xl"><span class="font-bold text-slate-700">${gp.name}</span><span class="text-xs font-bold text-slate-400">${gp.invite_code}</span></div>`).join('') : '<p class="text-center text-xs text-slate-300">尚未加入群組</p>'}
+                    <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mb-20">
+                        <div class="flex justify-between items-center mb-4 pl-1">
+                            <h3 class="text-xs font-black text-slate-300 uppercase">My Groups</h3>
+                            <span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md">${myGroups?.length || 0}</span>
                         </div>
+                        
+                        <div class="space-y-3 mb-6">
+                            ${myGroups?.length ? myGroups.map(item => `
+                                <div class="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-400 text-xs font-black shadow-sm">
+                                            ${item.groups.name.substring(0,1)}
+                                        </div>
+                                        <div>
+                                            <span class="block font-bold text-slate-700 text-sm">${item.groups.name}</span>
+                                            <span class="block text-[10px] font-bold text-slate-400 tracking-wider">CODE: ${item.groups.invite_code}</span>
+                                        </div>
+                                    </div>
+                                    <button class="p-2 text-slate-300 hover:text-indigo-500 transition-colors" onclick="copyCode('${item.groups.invite_code}')"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                                </div>
+                            `).join('') : '<div class="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-bold">尚未加入任何群組</div>'}
+                        </div>
+
                         <div class="flex gap-3">
-                            <button onclick="handleCreateGroup()" class="flex-1 py-3 bg-slate-100 rounded-xl text-xs font-bold text-slate-600">建立群組</button>
-                            <button onclick="handleJoinGroup()" class="flex-1 py-3 bg-slate-100 rounded-xl text-xs font-bold text-slate-600">加入群組</button>
+                            <button onclick="handleCreateGroup()" class="flex-1 py-4 bg-slate-900 text-white rounded-2xl text-xs font-bold shadow-lg shadow-slate-200 active:scale-95 transition-transform">建立新群組</button>
+                            <button onclick="handleJoinGroup()" class="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-xs font-bold active:scale-95 transition-transform">加入群組</button>
                         </div>
                     </div>
                 `;
@@ -263,40 +505,120 @@
             lucide.createIcons();
         }
 
-        // 4. 功能邏輯 (修正群組建立)
+        // ==========================================
+        // 功能邏輯：群組
+        // ==========================================
         async function handleCreateGroup() {
-            const name = prompt("請輸入群組名稱：");
+            const name = prompt("請為你的群組取個名字：");
             if (!name) return;
 
-            // 1. 建立群組 (SQL已修正權限，現在可以了)
-            const { data: g, error } = await _supabase.from('groups').insert([{ name, creator_id: currentUser.id }]).select().single();
+            // 1. 產生 6 碼亂數邀請碼
+            const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            // 2. 寫入 DB
+            const { data: g, error } = await _supabase.from('groups').insert([{ 
+                name, 
+                invite_code: inviteCode, 
+                creator_id: currentUser.id 
+            }]).select().single();
             
             if (error) return alert("建立失敗: " + error.message);
 
-            // 2. 加入自己
+            // 3. 將自己加入群組 (Admin)
             await _supabase.from('group_members').insert([{ group_id: g.id, user_id: currentUser.id, role: 'admin' }]);
             
-            alert("群組建立成功！");
+            alert(`群組「${name}」建立成功！\n邀請碼: ${inviteCode}`);
             renderContent();
             loadGroupsToSelect();
         }
 
         async function handleJoinGroup() {
-            const code = prompt("請輸入邀請碼：");
+            const code = prompt("請輸入 6 位數邀請碼：");
             if(!code) return;
-            // 簡單加入邏輯
-            const { data: g } = await _supabase.from('groups').select('id').eq('invite_code', code).single();
-            if(!g) return alert("邀請碼無效");
+
+            const { data: g } = await _supabase.from('groups').select('id, name').eq('invite_code', code).single();
+            if(!g) return alert("找不到此邀請碼");
+
             const { error } = await _supabase.from('group_members').insert([{ group_id: g.id, user_id: currentUser.id }]);
-            if(error) alert("加入失敗或已在群組中"); else { alert("加入成功"); renderContent(); loadGroupsToSelect(); }
+            
+            if(error) {
+                if(error.code === '23505') alert("你已經在這個群組裡了！"); // Unique violation
+                else alert("加入失敗");
+            } else { 
+                alert(`成功加入「${g.name}」！`); 
+                renderContent(); 
+                loadGroupsToSelect(); 
+            }
         }
 
-        async function updateProfile() {
-            const name = prompt("請輸入新的暱稱：");
-            if(!name) return;
-            // 這裡不會再報錯，因為 SQL 已經補上欄位了
-            await _supabase.from('profiles').update({ username: name }).eq('id', currentUser.id);
-            renderContent();
+        // ==========================================
+        // 功能邏輯：個人資料 (對應 SQL 新欄位)
+        // ==========================================
+        function openProfileModal(name, bankCode, bankAccount, birthday) {
+            document.getElementById('edit-username').value = name;
+            document.getElementById('edit-bank-code').value = bankCode;
+            document.getElementById('edit-bank-account').value = bankAccount;
+            document.getElementById('edit-birthday').value = birthday;
+            
+            const modal = document.getElementById('profile-modal');
+            modal.classList.add('open');
+        }
+
+        async function saveProfile() {
+            const updates = {
+                username: document.getElementById('edit-username').value,
+                bank_code: document.getElementById('edit-bank-code').value,
+                bank_account: document.getElementById('edit-bank-account').value,
+                birthday: document.getElementById('edit-birthday').value || null, // Handle empty date
+                updated_at: new Date()
+            };
+
+            const { error } = await _supabase.from('profiles').update(updates).eq('id', currentUser.id);
+            
+            if (error) alert(error.message);
+            else {
+                closeModal('profile-modal');
+                renderContent(); // Refresh UI
+            }
+        }
+
+        // ==========================================
+        // 功能邏輯：新增項目
+        // ==========================================
+        function setAddType(t) {
+            currentAddType = t;
+            const indicator = document.getElementById('type-indicator');
+            const btnWish = document.getElementById('btn-type-wish');
+            const btnDebt = document.getElementById('btn-type-debt');
+            const debtOptions = document.getElementById('debt-options');
+            
+            if(t === 'wishlist') {
+                indicator.style.transform = 'translateX(0%)';
+                btnWish.classList.add('text-indigo-600');
+                btnWish.classList.remove('text-slate-400');
+                btnDebt.classList.remove('text-indigo-600');
+                btnDebt.classList.add('text-slate-400');
+                
+                debtOptions.style.maxHeight = '0px';
+                debtOptions.classList.add('hidden');
+                document.getElementById('submit-btn').innerHTML = '<span>發佈願望</span>';
+            } else {
+                indicator.style.transform = 'translateX(100%)';
+                btnDebt.classList.add('text-indigo-600');
+                btnDebt.classList.remove('text-slate-400');
+                btnWish.classList.remove('text-indigo-600');
+                btnWish.classList.add('text-slate-400');
+
+                debtOptions.classList.remove('hidden');
+                // 稍微延遲讓 hidden class 移除後再執行動畫
+                setTimeout(() => debtOptions.style.maxHeight = '100px', 10);
+                
+                // 載入成員
+                const gid = document.getElementById('add-group-id').value;
+                if(gid) loadGroupMembers(gid);
+                
+                document.getElementById('submit-btn').innerHTML = '<span>記錄這筆帳</span>';
+            }
         }
 
         async function handleSubmit() {
@@ -306,35 +628,56 @@
             
             if(!name || !gid) return alert("請填寫完整資訊");
 
-            if(currentAddType === 'wishlist') {
-                await _supabase.from('gifts').insert([{ item_name: name, amount: parseInt(amount)||0, group_id: gid, creator_id: currentUser.id }]);
-            } else {
-                const target = document.getElementById('add-target-member').value;
-                if(!target) return alert("請選擇借貸對象");
-                await _supabase.from('ledgers').insert([{ description: name, amount: parseInt(amount)||0, group_id: gid, creditor_id: currentUser.id, debtor_id: target }]);
+            try {
+                if(currentAddType === 'wishlist') {
+                    await _supabase.from('gifts').insert([{ 
+                        item_name: name, 
+                        amount: parseInt(amount)||0, 
+                        group_id: gid, 
+                        creator_id: currentUser.id 
+                    }]);
+                } else {
+                    const target = document.getElementById('add-target-member').value;
+                    if(!target) return alert("請選擇是誰欠你錢");
+                    
+                    await _supabase.from('ledgers').insert([{ 
+                        description: name, 
+                        amount: parseInt(amount)||0, 
+                        group_id: gid, 
+                        creditor_id: currentUser.id, // 我付錢
+                        debtor_id: target // 對方欠錢
+                    }]);
+                }
+                closeModal('add-modal');
+                // 清空表單
+                document.getElementById('add-name').value = '';
+                document.getElementById('add-amount').value = '';
+                
+                renderContent();
+            } catch (e) {
+                console.error(e);
+                alert("發生錯誤");
             }
-            alert("發佈成功");
-            closeModal();
-            renderContent();
         }
 
-        // 輔助函式
+        // ==========================================
+        // 輔助函式與 UI 控制
+        // ==========================================
         function openAddModal() { document.getElementById('add-modal').classList.add('open'); }
-        function closeModal() { document.getElementById('add-modal').classList.remove('open'); }
-        
-        function setAddType(t) {
-            currentAddType = t;
-            document.getElementById('type-wish').className = t==='wishlist' ? 'flex-1 py-3 rounded-xl text-xs font-bold bg-white text-indigo-600 shadow-sm transition-all' : 'flex-1 py-3 rounded-xl text-xs font-bold text-slate-400 transition-all';
-            document.getElementById('type-debt').className = t!=='wishlist' ? 'flex-1 py-3 rounded-xl text-xs font-bold bg-white text-indigo-600 shadow-sm transition-all' : 'flex-1 py-3 rounded-xl text-xs font-bold text-slate-400 transition-all';
-            document.getElementById('debt-options').classList.toggle('hidden', t==='wishlist');
-            if(t!=='wishlist') loadGroupMembers(document.getElementById('add-group-id').value);
-        }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
         async function loadGroupsToSelect() {
-            const { data } = await _supabase.from('groups').select('*');
+            // 讀取我參與的群組
+            const { data } = await _supabase.from('group_members').select('group_id, groups(id, name)').eq('user_id', currentUser.id);
             const s = document.getElementById('add-group-id');
             s.innerHTML = '<option value="">選擇群組</option>';
-            data?.forEach(g => s.innerHTML += `<option value="${g.id}">${g.name}</option>`);
+            data?.forEach(item => {
+                s.innerHTML += `<option value="${item.groups.id}">${item.groups.name}</option>`;
+            });
+        }
+
+        async function handleGroupChange(gid) {
+            if(currentAddType === 'debt') loadGroupMembers(gid);
         }
 
         async function loadGroupMembers(gid) {
@@ -342,17 +685,54 @@
             const { data } = await _supabase.from('group_members').select('user_id, profiles(username)').eq('group_id', gid);
             const s = document.getElementById('add-target-member');
             s.innerHTML = '';
-            data?.filter(m => m.user_id !== currentUser.id).forEach(m => s.innerHTML += `<option value="${m.user_id}">${m.profiles.username}</option>`);
+            // 過濾掉自己，只能選別人
+            const others = data?.filter(m => m.user_id !== currentUser.id);
+            
+            if(!others || others.length === 0) {
+                s.innerHTML = '<option value="">群組內無其他成員</option>';
+            } else {
+                others.forEach(m => s.innerHTML += `<option value="${m.user_id}">${m.profiles.username}</option>`);
+            }
         }
 
-        function switchTab(t) {
-            activeTab = t;
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('nav-'+t).classList.add('active');
+        // 願望認領切換
+        async function toggleReserve(giftId, newState) {
+            await _supabase.from('gifts').update({ is_reserved: newState }).eq('id', giftId);
             renderContent();
         }
 
-        async function handleLogout() { await _supabase.auth.signOut(); window.location.reload(); }
+        // Tab 切換 UI 狀態
+        function switchTab(t) {
+            activeTab = t;
+            // Reset icons styling
+            document.querySelectorAll('.nav-icon').forEach(i => {
+                i.classList.remove('text-indigo-600');
+                i.classList.add('text-slate-300');
+            });
+            document.querySelectorAll('.nav-text').forEach(tx => {
+                tx.classList.remove('text-indigo-600');
+                tx.classList.add('text-slate-300');
+            });
+
+            // Active state
+            const btn = document.getElementById('nav-' + t);
+            if(btn) {
+                btn.querySelector('.nav-icon').classList.add('text-indigo-600');
+                btn.querySelector('.nav-icon').classList.remove('text-slate-300');
+                btn.querySelector('.nav-text').classList.add('text-indigo-600');
+                btn.querySelector('.nav-text').classList.remove('text-slate-300');
+            }
+            renderContent();
+        }
+        
+        function showToast(msg, type='info') {
+            alert(msg); // 簡單實作，可替換為更漂亮的 Toast
+        }
+
+        function copyCode(code) {
+            navigator.clipboard.writeText(code);
+            alert("邀請碼已複製: " + code);
+        }
     </script>
 </body>
 </html>
