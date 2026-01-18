@@ -38,7 +38,10 @@
 
         /* 共用元件樣式 */
         .input-field { @apply w-full p-4 bg-slate-50 rounded-2xl outline-none border-2 border-transparent focus:bg-white focus:border-indigo-600 transition-all font-bold text-sm placeholder:font-normal placeholder:text-slate-400; }
-        .modal-overlay { @apply fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md flex items-end justify-center p-0 sm:p-4 transition-opacity duration-300; }
+        
+        /* 修正：彈窗置中 (items-center) */
+        .modal-overlay { @apply fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 transition-opacity duration-300; }
+        .modal-content { @apply bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar; }
         
         /* 銀行卡片質感 */
         .bank-card-gradient { background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%); }
@@ -48,7 +51,6 @@
 
     <div id="toast" class="toast"></div>
 
-    <!-- 登入頁面 -->
     <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 relative z-50 bg-slate-50">
         <div class="w-full max-w-md bg-white rounded-[3.5rem] shadow-2xl p-12 text-center border border-slate-100">
             <div class="w-24 h-24 bg-indigo-600 rounded-[2.5rem] mx-auto mb-10 flex items-center justify-center text-white shadow-2xl shadow-indigo-100 transform -rotate-6">
@@ -68,7 +70,6 @@
         </div>
     </div>
 
-    <!-- 主程式結構 -->
     <div id="main-app" class="hidden max-w-md mx-auto min-h-screen flex flex-col">
         <header class="px-6 py-6 sticky top-0 z-40 flex justify-between items-center glass">
             <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
@@ -93,9 +94,8 @@
         </nav>
     </div>
 
-    <!-- 通用多功能彈窗 (取代 Prompt) -->
     <div id="universal-modal" class="hidden modal-overlay">
-        <div class="bg-white w-full max-w-md rounded-t-[3.5rem] sm:rounded-[3.5rem] p-10 shadow-2xl animate-in slide-in-from-bottom duration-500 max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <div class="modal-content animate-in zoom-in-95 duration-200">
             <div class="flex justify-between items-center mb-8">
                 <h2 id="modal-title" class="text-2xl font-black text-slate-900 tracking-tight"></h2>
                 <button onclick="closeUniversalModal()" class="p-3 bg-slate-50 rounded-full"><i data-lucide="x" class="w-6 h-6 text-slate-400"></i></button>
@@ -105,9 +105,8 @@
         </div>
     </div>
 
-    <!-- 新增願望/記帳 Modal -->
     <div id="add-modal" class="hidden modal-overlay">
-        <div class="bg-white w-full max-w-md rounded-t-[3.5rem] sm:rounded-[3.5rem] p-10 shadow-2xl animate-in slide-in-from-bottom duration-500">
+        <div class="modal-content animate-in zoom-in-95 duration-200">
             <div class="flex justify-between items-center mb-10">
                 <h2 class="text-2xl font-black text-slate-900 tracking-tight">New Activity</h2>
                 <button onclick="closeModal()" class="p-3 bg-slate-50 rounded-full"><i data-lucide="x" class="w-6 h-6 text-slate-400"></i></button>
@@ -185,7 +184,7 @@
             loadGroupsToSelect();
         }
 
-        // 3. 多功能彈窗控制器 (徹底解決信任感與格式問題)
+        // 3. 多功能彈窗控制器
         function showUniversalModal(title, fields, submitCallback) {
             const modal = document.getElementById('universal-modal');
             const titleEl = document.getElementById('modal-title');
@@ -210,19 +209,14 @@
                 input.value = f.value || '';
                 input.className = "input-field";
                 
-                // 針對日期與數字鍵盤優化
-                if (f.type === 'date') {
-                    // 原生日期選擇器會自動強制 YYYY-MM-DD
-                } else if (f.type === 'tel') {
-                    input.inputMode = 'numeric';
-                    input.pattern = '[0-9]*';
-                }
+                if (f.type === 'tel') { input.inputMode = 'numeric'; input.pattern = '[0-9]*'; }
                 
                 wrapper.appendChild(label);
                 wrapper.appendChild(input);
                 fieldsContainer.appendChild(wrapper);
             });
 
+            // 移除舊的 event listener，防止重複觸發
             const newSubmitBtn = submitBtn.cloneNode(true);
             submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
 
@@ -353,7 +347,7 @@
                         <p class="text-xs font-bold text-indigo-500 tracking-wide">$ ${g.amount.toLocaleString()}</p>
                     </div>
                     <div>
-                        ${isMine ? `<div class="text-right text-slate-200"><p class="text-[9px] font-black uppercase tracking-widest">${g.is_reserved ? '已被認領 🤫' : '等待驚喜'}</p><p class="text-[9px] font-bold mt-1 flex items-center gap-1 justify-end"><i data-lucide="eye" class="w-3 h-3"></i> ${v} 人正關注</p></div>` : (g.is_reserved ? `<span class="badge text-emerald-600 bg-emerald-50 border border-emerald-100 text-[10px] font-black px-4 py-2 rounded-full uppercase">已被認領</span>` : `<button onclick="reserveGift('${g.id}', this)" class="btn-sm bg-slate-900 text-white font-black hover:bg-black py-2.5 px-6 uppercase">認領願望</button>`)}
+                        ${isMine ? `<div class="text-right text-slate-200"><p class="text-[9px] font-black uppercase tracking-widest">${g.is_reserved ? '已被認領 🤫' : '等待驚喜'}</p><p class="text-[9px] font-bold mt-1 flex items-center gap-1 justify-end"><i data-lucide="eye" class="w-3 h-3"></i> ${v} 人正關注</p></div>` : (g.is_reserved ? `<span class="badge text-emerald-600 bg-emerald-50 border border-emerald-100 text-[10px] font-black px-4 py-2 rounded-full uppercase">已被認領</span>` : `<button onclick="reserveGift('${g.id}', this)" class="btn-sm bg-slate-900 text-white font-black hover:bg-black py-2.5 px-6 rounded-full uppercase">認領願望</button>`)}
                     </div>
                 </div>`;
             }).join('') || renderEmpty('清單目前是空的', '許下一個願望，讓朋友知道！')}</div>`;
@@ -364,9 +358,9 @@
             container.innerHTML = `<h2 class="text-3xl font-black mb-8 tracking-tight">Ledgers</h2><div class="space-y-4">${ls?.map(l => {
                 const isMeCred = l.creditor_id === currentUser.id;
                 let btn = '';
-                if(l.status==='pending') btn = !isMeCred ? `<button onclick="updateLedger('${l.id}','confirmed',this)" class="btn-sm bg-emerald-500 text-white uppercase">確認</button>` : `<span class="badge text-amber-500 bg-amber-50 text-[10px] font-black px-3 py-1.5 rounded-full uppercase">待確認</span>`;
-                else if(l.status==='confirmed') btn = !isMeCred ? `<button onclick="updateLedger('${l.id}','settling',this)" class="btn-sm bg-indigo-600 text-white uppercase">去還款</button>` : `<span class="badge text-emerald-600 bg-emerald-50 text-[10px] font-black px-3 py-1.5 rounded-full uppercase">已確認</span>`;
-                else if(l.status==='settling') btn = isMeCred ? `<button onclick="updateLedger('${l.id}','settled',this)" class="btn-sm bg-slate-900 text-white uppercase">確認收款</button>` : `<span class="badge text-indigo-500 bg-indigo-50 text-[10px] font-black px-3 py-1.5 rounded-full uppercase">確認中</span>`;
+                if(l.status==='pending') btn = !isMeCred ? `<button onclick="updateLedger('${l.id}','confirmed',this)" class="btn-sm bg-emerald-500 text-white px-3 py-1.5 rounded-full uppercase">確認</button>` : `<span class="badge text-amber-500 bg-amber-50 text-[10px] font-black px-3 py-1.5 rounded-full uppercase">待確認</span>`;
+                else if(l.status==='confirmed') btn = !isMeCred ? `<button onclick="updateLedger('${l.id}','settling',this)" class="btn-sm bg-indigo-600 text-white px-3 py-1.5 rounded-full uppercase">去還款</button>` : `<span class="badge text-emerald-600 bg-emerald-50 text-[10px] font-black px-3 py-1.5 rounded-full uppercase">已確認</span>`;
+                else if(l.status==='settling') btn = isMeCred ? `<button onclick="updateLedger('${l.id}','settled',this)" class="btn-sm bg-slate-900 text-white px-3 py-1.5 rounded-full uppercase">確認收款</button>` : `<span class="badge text-indigo-500 bg-indigo-50 text-[10px] font-black px-3 py-1.5 rounded-full uppercase">確認中</span>`;
                 else btn = `<span class="badge text-slate-200 bg-slate-50 line-through text-[10px] font-black px-3 py-1.5 rounded-full uppercase">已結清</span>`;
 
                 return `<div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm">
@@ -384,7 +378,7 @@
             }).join('') || renderEmpty('帳務乾乾淨淨', '目前沒有任何待處理的帳務。')}</div>`;
         }
 
-        // 7. 設定頁面：專業金融資訊展示
+        // 7. 設定頁面
         async function renderSettingsPage(container) {
             const { data: p } = await _supabase.from('profiles').select('*').eq('id', currentUser.id).single();
             const { data: gs } = await _supabase.from('groups').select('*');
@@ -406,7 +400,6 @@
                 </div>
 
                 <div class="space-y-6">
-                    <!-- 虛擬銀行卡展示 -->
                     <div class="bank-card-gradient rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden">
                         <div class="relative z-10">
                             <div class="flex justify-between items-start mb-8">
@@ -433,12 +426,12 @@
                     </div>
 
                     <button onclick="handleLogout()" class="w-full py-5 text-rose-500 font-black text-[11px] bg-white rounded-[2rem] shadow-sm border border-slate-100 btn-press uppercase tracking-widest">登出當前帳號</button>
-                    <p class="text-center text-[9px] font-black text-slate-200 uppercase tracking-[0.5em] pt-4">GiftFlow v2.1 • Definitive</p>
+                    <p class="text-center text-[9px] font-black text-slate-200 uppercase tracking-[0.5em] pt-4">GiftFlow v2.2 • Final Fix</p>
                 </div>`;
             lucide.createIcons();
         }
 
-        // 8. 互動邏輯 (取代 Prompt)
+        // 8. 互動邏輯 (核心修復)
         function handleEditProfile(n, b, code, acc) {
             showUniversalModal("編輯個人檔案", [
                 { id: 'name', label: '顯示暱稱', placeholder: '你的顯示名稱', value: n },
@@ -446,9 +439,10 @@
                 { id: 'bank_code', label: '銀行代碼 (3碼)', placeholder: '例如 822', type: 'tel', value: code },
                 { id: 'bank_account', label: '銀行帳號', placeholder: '僅限數字', type: 'tel', value: acc }
             ], async (data) => {
+                // 這裡會成功，因為 SQL RLS 已修正為允許 update own profile
                 const { error } = await _supabase.from('profiles').update({ 
                     username: data.name, 
-                    birthday: data.birthday, 
+                    birthday: data.birthday || null, 
                     bank_code: data.bank_code,
                     bank_account: data.bank_account
                 }).eq('id', currentUser.id);
@@ -463,11 +457,20 @@
                 { id: 'name', label: '群組名稱', placeholder: '例如：辦公室分餐、摯友團' }
             ], async (data) => {
                 if(!data.name) return showToast("名稱不可為空", 'error');
+                
+                // 第一步：建立群組 (SQL RLS 已允許創建者查看)
                 const { data: g, error } = await _supabase.from('groups').insert([{ name: data.name, creator_id: currentUser.id }]).select().single();
-                if (!error) {
-                    await _supabase.from('group_members').insert([{ group_id: g.id, user_id: currentUser.id, role: 'admin' }]);
+                
+                if (error) return showToast(error.message, 'error');
+
+                // 第二步：將自己加入群組成員
+                const { error: mErr } = await _supabase.from('group_members').insert([{ group_id: g.id, user_id: currentUser.id, role: 'admin' }]);
+                
+                if (!mErr) {
                     showToast("群組已成功建立", 'success'); renderContent(); loadGroupsToSelect();
-                } else showToast(error.message, 'error');
+                } else {
+                    showToast("加入群組失敗: " + mErr.message, 'error');
+                }
             });
         }
 
@@ -476,8 +479,8 @@
                 { id: 'code', label: '6 碼邀請碼', placeholder: '例如：XC821S' }
             ], async (data) => {
                 if(!data.code) return showToast("請輸入邀請碼", 'error');
-                // 呼叫預留的 RPC 加入邏輯
-                const { error } = await _supabase.rpc('join_group_by_invite', { code: data.code.toLowerCase() });
+                // 呼叫 RPC 加入邏輯 (避開 RLS 複雜檢查)
+                const { error } = await _supabase.rpc('join_group_by_invite', { code: data.code.toUpperCase() });
                 if (!error) { showToast("已成功進入群組", 'success'); renderContent(); loadGroupsToSelect(); }
                 else showToast(error.message, 'error');
             });
@@ -492,7 +495,7 @@
             });
         }
 
-        // 9. 核心交易流程 (智慧複製 + 金融級互動)
+        // 9. 核心交易流程
         async function updateLedger(id, status, btn) {
             triggerHaptic();
             if (status === 'settling') {
@@ -501,14 +504,12 @@
                     ? `銀行代碼：${l.profiles.bank_code}\n銀行帳號：${l.profiles.bank_account}` 
                     : "對方尚未設定支付資訊，請先連繫對方。";
                 
-                // 智慧複製：只複製帳號部分，方便使用者貼到網銀
                 if (l.profiles?.bank_account) {
                     await navigator.clipboard.writeText(l.profiles.bank_account);
                     showToast("已為您自動複製「銀行帳號」", 'success');
                 }
 
-                const confirmed = confirm(`即將還款給 ${l.profiles.username || '對方'}\n\n${payInfo}\n\n確定已完成匯款並通知對方收款？`);
-                if (!confirmed) return;
+                if (!confirm(`即將還款給 ${l.profiles.username || '對方'}\n\n${payInfo}\n\n確定已完成匯款並通知對方收款？`)) return;
             }
 
             setLoading(btn, true);
