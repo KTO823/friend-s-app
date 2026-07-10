@@ -3,34 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>記得給money｜卡戳</title>
+  <title>SYNC. 日常軌跡</title>
   <link rel="stylesheet" href="app.css">
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body>
   <div id="app-container">
     <header>
-      <h1>記得給money</h1>
+      <h1 id="main-header-title">🎂 生日倒數</h1>
     </header>
 
     <main>
       <div id="birthday-view" class="view">
-        <h2>🎂 生日倒數</h2>
         <div id="birthday-list" class="card-list">
           <p style="text-align: center; color: #999;">正在載入資料...</p>
         </div>
       </div>
 
       <div id="gift-view" class="view" style="display: none;">
-        <h2>🎁 許願池與禮物清單</h2>
-        <p id="gift-login-hint" style="text-align: center; color: #999;">請先登入才能查看或新增許願</p>
+        <p id="gift-login-hint" style="text-align: center; color: #999; margin-top: 20px;">請先登入才能查看或新增許願</p>
         <div id="gift-list" class="card-list"></div>
         <button id="open-gift-modal-btn" class="fab-btn" style="display: none;">＋</button>
       </div>
       
       <div id="trip-view" class="view" style="display: none;">
-        <h2>✈️ 行程與代購</h2>
-        <p id="trip-login-hint" style="text-align: center; color: #999;">請先至「設定」登入後才能看見與發佈行程</p>
+        <p id="trip-login-hint" style="text-align: center; color: #999; margin-top: 20px;">請先至「設定」登入後才能看見與發佈行程</p>
         <div id="trip-list" class="card-list"></div>
         <button id="open-trip-modal-btn" class="fab-btn" style="display: none;">＋</button>
       </div>
@@ -41,7 +38,7 @@
             <h3>發佈新行程</h3>
             <button id="close-trip-modal-btn" class="close-modal-btn">✕</button>
           </div>
-          <div class="input-section" style="margin-bottom: 0; border: none; padding: 0;">
+          <div class="input-section">
             <input type="text" id="trip-dest" class="form-input" placeholder="要去哪裡？ (例：秋葉原)">
             <input type="date" id="trip-date" class="form-input">
 
@@ -50,7 +47,7 @@
               <label><input type="radio" name="trip-type" value="international" onchange="toggleExchangeOptions()"> 國外行程</label>
             </div>
 
-            <div id="exchange-rate-section" style="display: none; background: #f0f4f8; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: left;">
+            <div id="exchange-rate-section" style="display: none; background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: left;">
                <label style="font-size: 13px; color: #666; margin-bottom: 5px; display: block;">選擇國家/幣值：</label>
                <select id="trip-currency" class="form-input" onchange="updateRatePreview()">
                  <option value="JPY">🇯🇵 日幣 (JPY)</option>
@@ -84,7 +81,7 @@
             <h3 id="gift-modal-title">新增許願商品</h3>
             <button id="close-gift-modal-btn" class="close-modal-btn">✕</button>
           </div>
-          <div class="input-section" style="margin-bottom: 0; border: none; padding: 0;">
+          <div class="input-section">
             <select id="gift-type" class="form-input" onchange="document.getElementById('birthday-year-container').style.display = this.value === 'birthday' ? 'block' : 'none';">
               <option value="general">🌟 一般許願</option>
               <option value="birthday">🎂 生日禮物</option>
@@ -94,7 +91,7 @@
               <input type="number" id="gift-birthday-year" class="form-input" placeholder="指定哪一年的生日？ (例：2026)">
             </div>
 
-            <input type="text" id="gift-name" class="form-input" placeholder="商品名稱 (例：夏目友人帳 貓咪老師娃娃)">
+            <input type="text" id="gift-name" class="form-input" placeholder="商品名稱 (例：星街彗星 壓克力立牌)">
             <input type="text" id="gift-link" class="form-input" placeholder="參考網址或圖片連結 (選填)">
             <input type="number" id="gift-price" class="form-input" placeholder="大約價格 (選填)">
             <input type="text" id="gift-note" class="form-input" placeholder="備註細節">
@@ -104,11 +101,10 @@
       </div>
       
       <div id="settings-view" class="view" style="display: none;">
-        <h2>⚙️ 個人設定</h2>
-        <div id="login-section">
+        <div id="login-section" style="margin-top: 30px;">
           <button id="login-btn" class="primary-btn">用 Google 登入</button>
         </div>
-        <div id="profile-section" style="display: none;">
+        <div id="profile-section" style="display: none; margin-top: 10px;">
           <p>目前登入：<span id="user-email"></span></p>
           <div class="input-group">
             <label>自定義暱稱：</label>
@@ -128,7 +124,7 @@
             <button id="add-payment-btn" class="secondary-btn" style="margin-top: 10px;">＋ 新增收款方式</button>
           </div>
           <button id="save-profile-btn" class="primary-btn" style="margin-top: 20px;">儲存設定</button>
-          <button id="delete-account-btn" class="secondary-btn" style="margin-top: 20px; color: #ff6b6b; background-color: #fff0f0;">刪除帳號資料 (測試用)</button>
+          <button id="delete-account-btn" class="secondary-btn" style="margin-top: 20px; color: #ef4444; background-color: #fef2f2;">刪除帳號資料 (測試用)</button>
           <button id="logout-btn" class="secondary-btn" style="margin-top: 10px;">登出</button>
         </div>
       </div>
@@ -198,17 +194,17 @@
       if (mode === 'custom') {
         preview.textContent = "💡 將使用您下方輸入的固定匯率計算";
       } else if (mode === 'publish') {
-        preview.textContent = "⏳ 正在即時連線取得最新匯率...";
+        preview.textContent = "⏳ 正在連線取得最新匯率...";
         try {
           const res = await fetch('https://open.er-api.com/v6/latest/' + currency);
           const data = await res.json();
           window.currentFetchedRate = data.rates.TWD;
-          preview.textContent = `✅ 最新真實匯率：1 ${currency} = ${window.currentFetchedRate.toFixed(4)} TWD\n(發佈後將永久鎖定此匯率)`;
+          preview.textContent = `✅ 最新真實匯率：1 ${currency} = ${window.currentFetchedRate.toFixed(4)} TWD\n(發佈後將永久鎖定)`;
         } catch (e) {
-          preview.textContent = "❌ 無法取得匯率，請稍後再試或使用自訂匯率";
+          preview.textContent = "❌ 無法取得匯率，請使用自訂匯率";
         }
       } else if (mode === 'purchase') {
-         preview.textContent = "💡 將於朋友按下「完成代購」時，系統自動抓取當天匯率結算";
+         preview.textContent = "💡 系統將於代購完成時自動結算當天匯率";
       }
     };
 
@@ -305,7 +301,6 @@
             uid: user.uid, name: myName, avatar: myAvatar, destination: dest, date: date, note: note, tripType: tripType, exchangeInfo: exchangeInfo, createdAt: new Date()
           });
           
-          // 修正過且乾淨的寄信邏輯
           const usersSnap = await getDocs(collection(db, "users"));
           usersSnap.forEach(u => {
             const friendEmail = u.data().email;
@@ -313,7 +308,7 @@
               emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { sender_name: myName, destination: dest, to_email: friendEmail }).catch(err => console.error("寄信失敗", err));
             }
           });
-          alert("行程已發佈！(若沒收到信請檢查 EmailJS To_email 變數)");
+          alert("行程已發佈！通知信已寄出。");
         }
         document.getElementById('trip-dest').value = '';
         document.getElementById('trip-modal').classList.remove('active');
@@ -326,7 +321,6 @@
       }
     });
 
-    // 儲存禮物邏輯大更新
     document.getElementById('add-gift-btn')?.addEventListener('click', async () => {
       const user = auth.currentUser;
       const type = document.getElementById('gift-type').value;
@@ -363,7 +357,7 @@
             createdAt: new Date()
           });
         }
-        alert("已成功丟入！");
+        alert("已成功送出！");
         document.getElementById('gift-name').value = '';
         document.getElementById('gift-modal').classList.remove('active');
         document.body.classList.remove('modal-open');
@@ -391,7 +385,7 @@
       window.globalGifts = [];
       snapshot.forEach(doc => window.globalGifts.push({ id: doc.id, ...doc.data() }));
       if (window.renderGifts) window.renderGifts(window.globalGifts, auth.currentUser?.uid);
-      if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid); // 聯動更新行程板
+      if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
     });
 
     window.deleteTrip = async function(id) {
@@ -405,7 +399,7 @@
     };
 
     window.claimGift = async function(giftId) {
-      if(!confirm("確定要偷偷認領這個願望嗎？壽星不會知道是你喔！")) return;
+      if(!confirm("確定要認領這個願望嗎？壽星將不會知道是你準備的驚喜喔！")) return;
       try { await updateDoc(doc(db, "gifts", giftId), { claimedBy: auth.currentUser.uid }); } catch(e) { alert("認領失敗：" + e.message); }
     };
 
