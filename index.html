@@ -97,17 +97,24 @@
     document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
     // 動態新增收款方式
-    window.addPaymentRow = function(type = '銀行帳號', value = '') {
+    // 1. 動態新增收款方式 (加入銀行代號欄位與連動顯示)
+    window.addPaymentRow = function(type = '銀行帳號', code = '', value = '') {
       const container = document.getElementById('payment-methods-container');
       const row = document.createElement('div');
       row.className = 'payment-row';
+      
+      // 當選擇 LINE Pay 時，隱藏銀行代號的格子
       row.innerHTML = `
-        <select class="pay-type">
+        <select class="pay-type" onchange="
+          const isBank = this.value === '銀行帳號';
+          this.nextElementSibling.style.display = isBank ? 'block' : 'none';
+          this.nextElementSibling.nextElementSibling.placeholder = isBank ? '請輸入帳號' : '貼上轉帳連結';
+        ">
           <option value="銀行帳號" ${type === '銀行帳號' ? 'selected' : ''}>銀行帳號</option>
           <option value="LINE Pay" ${type === 'LINE Pay' ? 'selected' : ''}>LINE Pay</option>
-          <option value="其他" ${type === '其他' ? 'selected' : ''}>其他</option>
         </select>
-        <input type="text" class="pay-value" value="${value}" placeholder="填寫帳號或連結">
+        <input type="text" class="bank-code" value="${code}" placeholder="代號(如812)" style="width: 95px; display: ${type === '銀行帳號' ? 'block' : 'none'};">
+        <input type="text" class="pay-value" value="${value}" placeholder="${type === '銀行帳號' ? '請輸入帳號' : '貼上轉帳連結'}" style="flex: 1;">
         <button class="delete-btn" onclick="this.parentElement.remove()">刪除</button>
       `;
       container.appendChild(row);
@@ -125,13 +132,15 @@
       const avatar = document.getElementById('profile-avatar').value || "😎";
       const birthday = document.getElementById('profile-birthday').value;
 
+      // 2. 收集所有填寫的收款方式 (包含代號)
       const paymentRows = document.querySelectorAll('.payment-row');
       const payments = [];
       paymentRows.forEach(row => {
         const type = row.querySelector('.pay-type').value;
+        const code = row.querySelector('.bank-code').value;
         const value = row.querySelector('.pay-value').value;
         if (value.trim() !== '') {
-          payments.push({ type: type, value: value });
+          payments.push({ type: type, code: code, value: value });
         }
       });
 
@@ -194,7 +203,7 @@
             
             document.getElementById('payment-methods-container').innerHTML = '';
             if (data.payments && data.payments.length > 0) {
-              data.payments.forEach(p => window.addPaymentRow(p.type, p.value));
+              data.payments.forEach(p => window.addPaymentRow(p.type, p.code || '', p.value));
             }
           }
         } catch (error) {
