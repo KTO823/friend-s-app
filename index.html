@@ -15,15 +15,9 @@
     <main>
       <div id="birthday-view" class="view">
         <h2>🎂 生日倒數</h2>
-        
-        <div class="input-section">
-          <input type="text" id="bd-name" placeholder="朋友名稱" class="form-input">
-          <input type="date" id="bd-date" class="form-input">
-          <button onclick="addBirthday()" class="primary-btn">新增生日</button>
-        </div>
-
         <div id="birthday-list" class="card-list">
-          </div>
+          <p style="text-align: center; color: #999;">正在載入資料...</p>
+        </div>
       </div>
 
       <div id="gift-view" class="view" style="display: none;">🎁 禮物清單功能開發中...</div>
@@ -76,10 +70,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    // 引入 Analytics
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
     // 填入你專屬的 Firebase 設定
     const firebaseConfig = {
@@ -92,31 +84,78 @@
       measurementId: "G-XK9XD971LZ"
     };
 
-    // 初始化所有 Firebase 服務
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
     const db = getFirestore(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // 把登入/登出功能綁定到按鈕上
+    // 登入與登出按鈕
     document.getElementById('login-btn').addEventListener('click', () => {
       signInWithPopup(auth, provider).catch(error => alert("登入失敗：" + error.message));
     });
+    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      signOut(auth);
+    // 儲存個人設定到 Firebase
+    document.getElementById('save-profile-btn').addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (!user) return alert("請先登入！");
+
+      const name = document.getElementById('profile-name').value;
+      const avatar = document.getElementById('profile-avatar').value || "😎";
+      const birthday = document.getElementById('profile-birthday').value;
+      const payment = document.getElementById('profile-payment').value;
+
+      if (!name || !birthday) return alert("名稱和生日一定要填喔！");
+
+      try {
+        // 將資料存進 'users' 集合中，用使用者的 ID 當作文件名稱
+        await setDoc(doc(db, "users", user.uid), {
+          name: name,
+          avatar: avatar,
+          birthday: birthday,
+          payment: payment,
+          email: user.email
+        });
+        alert("設定已成功儲存！");
+        window.loadBirthdays(); // 存檔後順便更新生日畫面
+      } catch (error) {
+        alert("儲存失敗：" + error.message);
+      }
     });
 
-    // 監聽使用者的登入狀態
-    onAuthStateChanged(auth, (user) => {
+    // 從 Firebase 抓取所有人資料的函數
+    window.loadBirthdays = async function() {
+      try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const usersData = [];
+        querySnapshot.forEach((doc) => {
+          usersData.push(doc.data());
+        });
+        window.renderBirthdaysFromData(usersData); // 呼叫 app.js 的渲染函數
+      } catch (error) {
+        console.error("載入生日失敗：", error);
+      }
+    };
+
+    // 監聽登入狀態
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // 已登入：顯示設定區塊，隱藏登入按鈕
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('profile-section').style.display = 'block';
         document.getElementById('user-email').textContent = user.email;
+        
+        // 登入後，自動把之前存過的設定填回輸入框
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          document.getElementById('profile-name').value = data.name || "";
+          document.getElementById('profile-avatar').value = data.avatar || "";
+          document.getElementById('profile-birthday').value = data.birthday || "";
+          document.getElementById('profile-payment').value = data.payment || "";
+        }
+        
+        window.loadBirthdays(); // 登入後自動載入生日列表
       } else {
-        // 未登入：顯示登入按鈕，隱藏設定區塊
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('profile-section').style.display = 'none';
       }
