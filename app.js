@@ -133,11 +133,15 @@ window.renderTrips = function(trips, currentUserId) {
             statusBtn = p.status === 'purchased' ? '✅ 朋友已買到' : '⏳ 尚未購買';
         }
 
+        // 幫代購也加上參考網址
+        const proxyLink = p.link ? `<a href="${p.link}" target="_blank" style="color: #3b82f6; font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">🔗 參考網址</a>` : '';
+
         proxyHtml += `
           <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
               <div style="font-size: 14px; flex: 1; padding-right: 10px;">
                 <span style="font-weight: 600; color: #333;">${p.name}：</span>${p.itemName}
                 ${p.price ? `<div style="color: #ef4444; font-size: 12px; margin-top: 4px;">預估：$${p.price}</div>` : ''}
+                <div>${proxyLink}</div>
               </div>
               <div>${statusBtn}</div>
           </div>`;
@@ -150,14 +154,20 @@ window.renderTrips = function(trips, currentUserId) {
     card.style.flexDirection = 'column';
     card.style.alignItems = 'flex-start';
     
+    // ✨ 地點加上旅遊風藍色標籤
     card.innerHTML = `
-      ${actionsHtml}      
+      ${actionsHtml}
+      <div style="background: #eff6ff; color: #3b82f6; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px;">✈️ 即將啟程</div>
+      
       <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 15px; padding-right: 50px; box-sizing: border-box;">
         <div class="avatar-circle">
           <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
         <div style="text-align: left;">
-          <p class="card-title">${t.name} 要去 <strong style="color: #000;">${t.destination}</strong></p>
+          <p class="card-title" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+            ${t.name} 要去 
+            <strong style="color: #2563eb; background: #dbeafe; padding: 4px 10px; border-radius: 8px; font-size: 18px; margin-left: 2px; display: inline-block;">📍 ${t.destination}</strong>
+          </p>
           <p class="card-subtitle">日期：${t.date}</p>
         </div>
       </div>
@@ -202,31 +212,38 @@ window.renderGifts = function(gifts, currentUserId) {
       `;
     }
 
-    // 🏆 三重視角的認領邏輯
+    // 🎁 加入「收到禮物」的結案狀態判斷
     let claimHtml = '';
-    if (g.uid !== currentUserId) {
-         // 他人的願望
-         if (g.claimedBy) {
-             if (g.claimedBy === currentUserId) {
-                 // 是我自己認領的
-                 claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center; border: 1px solid #bbf7d0;">✅ 你已認領準備此禮物！</div>`;
-             } else {
-                 // 其他朋友認領的 (防止重複送禮)
-                 claimHtml = `<div style="background: #f8fafc; color: #94a3b8; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center;">🎁 已有其他朋友認領</div>`;
-             }
-         } else {
-             // 沒人認領，顯示認領按鈕
-             claimHtml = `<button onclick="claimGift('${g.id}')" style="margin-top: 12px; width: 100%; background: #333; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🙋‍♂️ 我來準備這個驚喜</button>`;
-         }
+    if (g.status === 'received') {
+        if (g.uid === currentUserId) {
+            claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 15px; text-align: center; border: 1px solid #bbf7d0;">🎉 願望已達成！已順利收到禮物啦</div>`;
+        } else {
+            claimHtml = `<div style="background: #f8fafc; color: #64748b; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 15px; text-align: center;">✅ 朋友已經收到這個禮物囉！</div>`;
+        }
     } else {
-         // 自己的願望 (壽星本人視角)
-         if (g.claimedBy) {
-             // 已有人認領，但隱藏是誰
-             claimHtml = `<div style="color: #f97316; font-size: 13px; margin-top: 15px; text-align: center; font-weight: bold;">🎉 有神奇人類已認領！敬請期待</div>`;
-         } else {
-             // 沒人認領
-             claimHtml = `<div style="color: #94a3b8; font-size: 13px; margin-top: 15px; text-align: center; font-style: italic;">⏳ 尚未有人認領...</div>`;
-         }
+        if (g.uid !== currentUserId) {
+             if (g.claimedBy) {
+                 if (g.claimedBy === currentUserId) {
+                     claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center; border: 1px solid #bbf7d0;">✅ 你已認領準備此禮物！</div>`;
+                 } else {
+                     claimHtml = `<div style="background: #f8fafc; color: #94a3b8; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center;">🎁 已有其他朋友認領</div>`;
+                 }
+             } else {
+                 claimHtml = `<button onclick="claimGift('${g.id}')" style="margin-top: 12px; width: 100%; background: #333; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🙋‍♂️ 我來準備這個驚喜</button>`;
+             }
+        } else {
+             if (g.claimedBy) {
+                 claimHtml = `
+                 <div style="color: #f97316; font-size: 13px; margin-top: 15px; text-align: center; font-weight: bold;">🎉 神秘小精靈已認領準備中！敬請期待</div>
+                 <button onclick="confirmGiftReceived('${g.id}')" style="margin-top: 12px; width: 100%; background: #ffffff; color: #333; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🎁 我收到這個禮物了！</button>
+                 `;
+             } else {
+                 claimHtml = `
+                 <div style="color: #94a3b8; font-size: 13px; margin-top: 15px; text-align: center; font-style: italic;">⏳ 期待中...</div>
+                 <button onclick="confirmGiftReceived('${g.id}')" style="margin-top: 12px; width: 100%; background: #ffffff; color: #333; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🎁 我已經拿到這個禮物了</button>
+                 `;
+             }
+        }
     }
 
     const avatarText = g.avatar || '😎';
@@ -239,6 +256,10 @@ window.renderGifts = function(gifts, currentUserId) {
     card.className = 'card';
     card.style.flexDirection = 'column';
     card.style.alignItems = 'flex-start';
+    
+    // 若已收到，讓卡片稍微變暗淡一點
+    if (g.status === 'received') card.style.opacity = '0.7';
+
     card.innerHTML = `
       ${actionsHtml}
       ${tagHtml}
@@ -253,7 +274,7 @@ window.renderGifts = function(gifts, currentUserId) {
       </div>
 
       <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left;">
-        <div style="font-weight: 600; color: #fb7171; font-size: 15px;">預估價格：${priceText}</div>
+        <div style="font-weight: 600; color: #ef4444; font-size: 15px;">預估價格：${priceText}</div>
         ${g.note ? `<div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 14px; color: #475569; line-height: 1.5;">備註：${g.note}</div>` : ''}
         <div>${linkHtml}</div>
         ${claimHtml}

@@ -359,6 +359,9 @@
         }
         alert("已成功送出！");
         document.getElementById('gift-name').value = '';
+        document.getElementById('gift-link').value = '';
+        document.getElementById('gift-price').value = '';
+        document.getElementById('gift-note').value = '';
         document.getElementById('gift-modal').classList.remove('active');
         document.body.classList.remove('modal-open');
       } catch (error) {
@@ -405,6 +408,12 @@
 
     window.purchaseProxy = async function(giftId) {
       try { await updateDoc(doc(db, "gifts", giftId), { status: 'purchased' }); } catch(e) { alert("標記失敗：" + e.message); }
+    };
+
+    // ✨ 新增：確認收到禮物的函數
+    window.confirmGiftReceived = async function(giftId) {
+      if(!confirm("確定已經收到這個禮物了嗎？恭喜！")) return;
+      try { await updateDoc(doc(db, "gifts", giftId), { status: 'received' }); } catch(e) { alert("標記失敗：" + e.message); }
     };
 
     window.editTrip = function(id) {
