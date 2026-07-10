@@ -50,8 +50,16 @@
           </div>
 
           <div class="input-group">
-            <label>收款方式 (銀行帳號或 LINE Pay 連結)：</label>
-            <input type="text" id="profile-payment" placeholder="方便朋友直接複製轉帳">
+            <label>銀行帳號 1 (例如：台新 812-xxxx)：</label>
+            <input type="text" id="profile-bank1" placeholder="填寫銀行代碼與帳號">
+          </div>
+          <div class="input-group">
+            <label>銀行帳號 2 (例如：國泰 013-xxxx)：</label>
+            <input type="text" id="profile-bank2" placeholder="備用銀行帳號">
+          </div>
+          <div class="input-group">
+            <label>LINE Pay 轉帳連結：</label>
+            <input type="text" id="profile-linepay" placeholder="貼上你的轉帳連結">
           </div>
           
           <button id="save-profile-btn" class="primary-btn">儲存設定</button>
@@ -103,17 +111,20 @@
       const name = document.getElementById('profile-name').value;
       const avatar = document.getElementById('profile-avatar').value || "😎";
       const birthday = document.getElementById('profile-birthday').value;
-      const payment = document.getElementById('profile-payment').value;
+      const bank1 = document.getElementById('profile-bank1').value;
+      const bank2 = document.getElementById('profile-bank2').value;
+      const linepay = document.getElementById('profile-linepay').value;
 
       if (!name || !birthday) return alert("名稱和生日一定要填喔！");
 
       try {
-        // 將資料存進 'users' 集合中，用使用者的 ID 當作文件名稱
         await setDoc(doc(db, "users", user.uid), {
           name: name,
           avatar: avatar,
           birthday: birthday,
-          payment: payment,
+          bank1: bank1,
+          bank2: bank2,
+          linepay: linepay,
           email: user.email
         });
         alert("設定已成功儲存！");
@@ -151,7 +162,9 @@
           document.getElementById('profile-name').value = data.name || "";
           document.getElementById('profile-avatar').value = data.avatar || "";
           document.getElementById('profile-birthday').value = data.birthday || "";
-          document.getElementById('profile-payment').value = data.payment || "";
+          document.getElementById('profile-bank1').value = data.bank1 || "";
+          document.getElementById('profile-bank2').value = data.bank2 || "";
+          document.getElementById('profile-linepay').value = data.linepay || "";
         }
         
         window.loadBirthdays(); // 登入後自動載入生日列表
