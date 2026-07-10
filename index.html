@@ -134,7 +134,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, collection, getDocs, getDoc, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, collection, getDocs, getDoc, addDoc, query, orderBy, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     // --- 請填入你的 EmailJS 金鑰 ---
@@ -315,17 +315,28 @@
         const myName = myDoc.exists() ? myDoc.data().name : "朋友";
         const myAvatar = myDoc.exists() ? myDoc.data().avatar : "😎";
 
-        await addDoc(collection(db, "trips"), {
-          uid: user.uid,
-          name: myName,
-          avatar: myAvatar,
-          destination: dest,
-          date: date,
-          note: note,
-          tripType: tripType,
-          exchangeInfo: exchangeInfo,
-          createdAt: new Date()
-        });
+        // 在 add-trip-btn 裡面，把原本的 addDoc 替換成這樣：
+        if (window.editingTripId) {
+          // 修改模式
+          await updateDoc(doc(db, "trips", window.editingTripId), {
+            destination: dest, date: date, note: note, tripType: tripType, exchangeInfo: exchangeInfo
+          });
+          alert("修改成功！");
+        } else {
+          // 新增模式
+          await addDoc(collection(db, "trips"), {
+            uid: user.uid, name: myName, avatar: myAvatar, destination: dest, date: date, note: note, tripType: tripType, exchangeInfo: exchangeInfo, createdAt: new Date()
+          });
+          // 只有新增的時候才寄信
+          const usersSnap = await getDocs(collection(db, "users"));
+          usersSnap.forEach(u => {
+            const friendEmail = u.data().email;
+            if (friendEmail && friendEmail !== user.email) {
+              emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { sender_name: myName, destination: dest, to_email: friendEmail }).catch(err => console.error("寄信失敗", err));
+            }
+          });
+          alert("行程已發佈！");
+        }
 
         // 寄信通知
         const usersSnap = await getDocs(collection(db, "users"));
@@ -383,17 +394,68 @@
       }
     });
 
+    // 建立全域變數來存資料，方便修改時抓取
+    window.globalTrips = [];
+    window.globalGifts = [];
+    window.editingTripId = null;
+    window.editingGiftId = null;
+
     onSnapshot(query(collection(db, "trips"), orderBy("createdAt", "desc")), (snapshot) => {
-      const trips = [];
-      snapshot.forEach(doc => trips.push(doc.data()));
-      if (window.renderTrips) window.renderTrips(trips);
+      window.globalTrips = [];
+      snapshot.forEach(doc => window.globalTrips.push({ id: doc.id, ...doc.data() }));
+      if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
     });
 
     onSnapshot(query(collection(db, "gifts"), orderBy("createdAt", "desc")), (snapshot) => {
-      const gifts = [];
-      snapshot.forEach(doc => gifts.push(doc.data()));
-      if (window.renderGifts) window.renderGifts(gifts);
+      window.globalGifts = [];
+      snapshot.forEach(doc => window.globalGifts.push({ id: doc.id, ...doc.data() }));
+      if (window.renderGifts) window.renderGifts(window.globalGifts, auth.currentUser?.uid);
     });
+
+    // --- 刪除功能 ---
+    window.deleteTrip = async function(id) {
+      if(!confirm("確定要刪除這個行程嗎？")) return;
+      try { await deleteDoc(doc(db, "trips", id)); } catch(e) { alert("刪除失敗：" + e.message); }
+    };
+
+    window.deleteGift = async function(id) {
+      if(!confirm("確定要將這個願望從許願池刪除嗎？")) return;
+      try { await deleteDoc(doc(db, "gifts", id)); } catch(e) { alert("刪除失敗：" + e.message); }
+    };
+
+    // --- 修改喚醒表單功能 ---
+    window.editTrip = function(id) {
+      const trip = window.globalTrips.find(t => t.id === id);
+      if(!trip) return;
+      window.editingTripId = id;
+      document.getElementById('trip-dest').value = trip.destination;
+      document.getElementById('trip-date').value = trip.date;
+      document.getElementById('trip-note').value = trip.note || '';
+      
+      if(trip.tripType) {
+        document.querySelector(`input[name="trip-type"][value="${trip.tripType}"]`).checked = true;
+        window.toggleExchangeOptions();
+      }
+      
+      document.getElementById('add-trip-btn').textContent = "儲存修改";
+      document.getElementById('trip-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    };
+
+    window.editGift = function(id) {
+      const gift = window.globalGifts.find(g => g.id === id);
+      if(!gift) return;
+      window.editingGiftId = id;
+      document.getElementById('gift-modal-title').textContent = "修改許願商品";
+      document.getElementById('gift-name').value = gift.itemName;
+      document.getElementById('gift-link').value = gift.link || '';
+      document.getElementById('gift-price').value = gift.price || '';
+      document.getElementById('gift-note').value = gift.note || '';
+      
+      document.getElementById('add-gift-btn').textContent = "儲存修改";
+      document.getElementById('gift-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    };
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
