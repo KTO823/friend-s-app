@@ -35,7 +35,7 @@ window.renderBirthdaysFromData = function(users) {
     if (!u.birthday) return;
     count++;
     const daysLeft = calculateDaysLeft(u.birthday);
-    let daysText = daysLeft === 0 ? "就是今天！" : `居然只剩 ${daysLeft} 天`;
+    let daysText = daysLeft === 0 ? "就是今天！" : `剩 ${daysLeft} 天`;
     
     // 判斷是否為第一名
     const isClosest = isFirst;
@@ -124,6 +124,39 @@ window.renderTrips = function(trips) {
   });
 }
 
+// 控制行程彈出視窗
+const tripModal = document.getElementById('trip-modal');
+document.getElementById('open-trip-modal-btn')?.addEventListener('click', () => {
+  tripModal.classList.add('active');
+  document.body.classList.add('modal-open'); // 鎖定背景滑動
+});
+document.getElementById('close-trip-modal-btn')?.addEventListener('click', () => {
+  tripModal.classList.remove('active');
+  document.body.classList.remove('modal-open'); // 解除背景鎖定
+});
+
+// 控制許願池彈出視窗
+const giftModal = document.getElementById('gift-modal');
+document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => {
+  document.getElementById('gift-modal-title').textContent = "新增許願商品";
+  document.getElementById('gift-note').value = ""; 
+  giftModal.classList.add('active');
+  document.body.classList.add('modal-open'); // 鎖定背景滑動
+});
+document.getElementById('close-gift-modal-btn')?.addEventListener('click', () => {
+  giftModal.classList.remove('active');
+  document.body.classList.remove('modal-open'); // 解除背景鎖定
+});
+
+// 行程板點擊「許願代購」
+window.openProxyRequest = function(destination) {
+  switchTab('gift');
+  document.getElementById('gift-modal-title').textContent = `請託代購：${destination}`;
+  document.getElementById('gift-note').value = `代購地點：${destination}`;
+  giftModal.classList.add('active');
+  document.body.classList.add('modal-open'); // 鎖定背景滑動
+};
+
 // 控制許願池彈出視窗的開關
 const giftModal = document.getElementById('gift-modal');
 document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => {
@@ -181,3 +214,4 @@ window.renderGifts = function(gifts) {
     list.appendChild(card);
   });
 }
+
