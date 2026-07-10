@@ -22,6 +22,7 @@ function calculateDaysLeft(dateString) {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 }
 
+// 渲染生日列表
 window.renderBirthdaysFromData = function(users) {
   const list = document.getElementById('birthday-list');
   list.innerHTML = '';
@@ -35,11 +36,20 @@ window.renderBirthdaysFromData = function(users) {
     let daysText = daysLeft === 0 ? "就是今天！" : `剩 ${daysLeft} 天`;
     let daysColor = daysLeft <= 7 ? "#ff6b6b" : "#4a4a4a";
     
+    // 動態計算頭像字體大小
+    const avatarText = u.avatar || '😎';
+    let avatarSize = '26px'; // 單一 Emoji 預設大小
+    if (avatarText.length >= 8) avatarSize = '12px'; // 長顏文字
+    else if (avatarText.length >= 5) avatarSize = '16px'; 
+    else if (avatarText.length >= 3) avatarSize = '20px';
+    
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
       <div style="display: flex; align-items: center; gap: 15px;">
-        <div style="font-size: 32px; width: 40px; text-align: center;">${u.avatar || '😎'}</div>
+        <div class="avatar-circle">
+          <span style="font-size: ${avatarSize};">${avatarText}</span>
+        </div>
         <div>
           <p class="card-title">${u.name}</p>
           <p class="card-subtitle">${u.birthday}</p>
@@ -64,17 +74,26 @@ window.renderTrips = function(trips) {
   }
 
   trips.forEach(t => {
-    // 將地點名稱轉換成 Google Maps 搜尋連結
+    // 產生 Google Maps 搜尋連結
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.destination)}`;
     
+    // 動態計算頭像字體大小
+    const avatarText = t.avatar || '😎';
+    let avatarSize = '26px';
+    if (avatarText.length >= 8) avatarSize = '12px';
+    else if (avatarText.length >= 5) avatarSize = '16px';
+    else if (avatarText.length >= 3) avatarSize = '20px';
+
     const card = document.createElement('div');
     card.className = 'card';
     card.style.flexDirection = 'column';
     card.style.alignItems = 'flex-start';
     
     card.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; width: 100%;">
-        <div style="font-size: 24px;">${t.avatar || '😎'}</div>
+      <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; width: 100%;">
+        <div class="avatar-circle">
+          <span style="font-size: ${avatarSize};">${avatarText}</span>
+        </div>
         <div style="flex: 1;">
           <p class="card-title">${t.name} 要去 <strong>${t.destination}</strong></p>
           <p class="card-subtitle">日期：${t.date}</p>

@@ -201,3 +201,18 @@ nav button:hover {
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* 圓形頭像專屬設計 */
+.avatar-circle {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  border-radius: 50%;
+  background-color: #f0f4f8;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
