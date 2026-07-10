@@ -1,0 +1,113 @@
+/* 基礎設定與乾淨字體 */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  background-color: #faf9f6; /* 溫和的米白色背景 */
+}
+
+/* 主畫面容器：限制寬度並置中，模擬手機版型 */
+#app-container {
+  max-width: 500px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+/* 頂部標題 */
+header {
+  padding: 24px 20px;
+  border-bottom: 1px solid #f2f2f2;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: #4a4a4a;
+}
+
+/* 內容顯示區塊 */
+main {
+  flex: 1;
+  padding: 30px 20px;
+}
+
+.view {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #666666;
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* 底部導航欄 */
+nav {
+  display: flex;
+  border-top: 1px solid #f2f2f2;
+  background-color: #ffffff;
+}
+
+nav button {
+  flex: 1;
+  padding: 18px 0;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #999999;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+nav button:hover {
+  color: #333333;
+}
+
+/* 新增的設定頁面樣式 */
+.input-group {
+  margin: 15px 0;
+  text-align: left;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #666;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4a4a4a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.secondary-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #f2f2f2;
+  color: #666;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+}

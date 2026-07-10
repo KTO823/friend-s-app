@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>朋友圈管理工具</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="app-container">
+    <header>
+      <h1>三人朋友圈</h1>
+    </header>
+
+    <main>
+      <div id="birthday-view" class="view">🎂 生日倒數功能開發中...</div>
+      <div id="gift-view" class="view" style="display: none;">🎁 禮物清單功能開發中...</div>
+      <div id="debt-view" class="view" style="display: none;">💰 債務紀錄功能開發中...</div>
+      
+      <div id="settings-view" class="view" style="display: none;">
+        <h2>⚙️ 個人設定</h2>
+        
+        <div id="login-section">
+          <p>請先登入才能使用完整功能</p>
+          <button id="login-btn" class="primary-btn">用 Google 登入</button>
+        </div>
+
+        <div id="profile-section" style="display: none;">
+          <p>目前登入：<span id="user-email"></span></p>
+          
+          <div class="input-group">
+            <label>自定義名稱：</label>
+            <input type="text" id="custom-name" placeholder="輸入你的暱稱">
+          </div>
+          
+          <div class="input-group">
+            <label>頭像 (Emoji/顏文字)：</label>
+            <input type="text" id="custom-avatar" placeholder="例如：😎 或 (≧▽≦)">
+          </div>
+          
+          <button id="save-profile-btn" class="primary-btn">儲存設定</button>
+          <button id="logout-btn" class="secondary-btn" style="margin-top: 20px;">登出</button>
+        </div>
+      </div>
+    </main>
+
+    <nav>
+      <button onclick="switchTab('birthday')">生日</button>
+      <button onclick="switchTab('gift')">禮物</button>
+      <button onclick="switchTab('debt')">債務</button>
+      <button onclick="switchTab('settings')">設定</button>
+    </nav>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    // 引入 Analytics
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+    // 填入你專屬的 Firebase 設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyCsG7ucrwAgoacvzMbxxeOV6-L9s_UxQLU",
+      authDomain: "birthday-gifts-and-debt.firebaseapp.com",
+      projectId: "birthday-gifts-and-debt",
+      storageBucket: "birthday-gifts-and-debt.firebasestorage.app",
+      messagingSenderId: "833409590607",
+      appId: "1:833409590607:web:f31bacf2232c591b98d13a",
+      measurementId: "G-XK9XD971LZ"
+    };
+
+    // 初始化所有 Firebase 服務
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // 把登入/登出功能綁定到按鈕上
+    document.getElementById('login-btn').addEventListener('click', () => {
+      signInWithPopup(auth, provider).catch(error => alert("登入失敗：" + error.message));
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      signOut(auth);
+    });
+
+    // 監聽使用者的登入狀態
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // 已登入：顯示設定區塊，隱藏登入按鈕
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('profile-section').style.display = 'block';
+        document.getElementById('user-email').textContent = user.email;
+      } else {
+        // 未登入：顯示登入按鈕，隱藏設定區塊
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('profile-section').style.display = 'none';
+      }
+    });
+  </script>
+
+  <script src="app.js"></script>
+</body>
+</html>
