@@ -105,6 +105,36 @@ window.renderTrips = function(trips, currentUserId) {
       `;
     }
 
+    // 抓取這個行程底下的專屬代購願望！
+    const tripProxies = window.globalGifts.filter(g => g.type === 'proxy' && g.tripId === t.id);
+    let proxyHtml = '';
+    if (tripProxies.length > 0) {
+      proxyHtml += `<div style="width: 100%; margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 12px; text-align: left;">`;
+      proxyHtml += `<p style="font-size: 14px; font-weight: bold; margin: 0 0 10px 0; color: #4a4a4a;">🛒 朋友託付的代購清單：</p>`;
+      
+      tripProxies.forEach(p => {
+        const isPublisher = (t.uid === currentUserId);
+        let statusBtn = '';
+        if (isPublisher) {
+            statusBtn = p.status === 'purchased' 
+              ? `<span style="color: #4caf50; font-size: 13px; font-weight: bold;">✅ 已買到</span>`
+              : `<button onclick="purchaseProxy('${p.id}')" style="background: #ff9f43; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">點我標記已買</button>`;
+        } else {
+            statusBtn = p.status === 'purchased' ? '✅ 朋友已買到' : '⏳ 尚未購買';
+        }
+
+        proxyHtml += `
+          <div style="display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; border: 1px solid #eee; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+              <div style="font-size: 14px; flex: 1; padding-right: 10px;">
+                <span style="font-weight: bold; color: #333;">${p.name}：</span>${p.itemName}
+                ${p.price ? `<div style="color: #ff6b6b; font-size: 12px; margin-top: 2px;">預估：$${p.price}</div>` : ''}
+              </div>
+              <div>${statusBtn}</div>
+          </div>`;
+      });
+      proxyHtml += `</div>`;
+    }
+
     const card = document.createElement('div');
     card.className = 'card';
     card.style.flexDirection = 'column';
@@ -129,9 +159,9 @@ window.renderTrips = function(trips, currentUserId) {
 
       <div style="display: flex; gap: 10px; width: 100%;">
         <a href="${mapUrl}" target="_blank" class="secondary-btn" style="text-align: center; text-decoration: none; flex: 1; padding: 10px 0; font-size: 14px; border-radius: 8px;">📍 附近地圖</a>
-        <button class="primary-btn" onclick="openProxyRequest('${t.destination}')" style="flex: 1; padding: 10px 0; background-color: #ff9f43; font-size: 14px; border-radius: 8px;">📝 許願代購</button>
+        <button class="primary-btn" onclick="openProxyRequest('${t.destination}', '${t.id}')" style="flex: 1; padding: 10px 0; background-color: #ff9f43; font-size: 14px; border-radius: 8px;">📝 許願代購</button>
       </div>
-    `;
+      ${proxyHtml} `;
     list.appendChild(card);
   });
 }
@@ -139,13 +169,19 @@ window.renderTrips = function(trips, currentUserId) {
 window.renderGifts = function(gifts, currentUserId) {
   const list = document.getElementById('gift-list');
   list.innerHTML = '';
-  if (gifts.length === 0) {
+  
+  // 只顯示「不是代購」的禮物
+  const generalGifts = gifts.filter(g => g.type !== 'proxy');
+
+  if (generalGifts.length === 0) {
     list.innerHTML = '<p style="text-align: center; color: #999;">許願池空空的，快來新增吧！</p>';
     return;
   }
-  gifts.forEach(g => {
+  
+  generalGifts.forEach(g => {
     const linkHtml = g.link ? `<a href="${g.link}" target="_blank" style="display: inline-block; margin-top: 4px; padding: 6px 12px; background-color: #fff3e0; color: #ff9f43; text-decoration: none; font-size: 13px; border-radius: 4px; font-weight: 500;">🔗 前往參考連結</a>` : '';
     const priceText = g.price ? `$${g.price}` : '未標價';
+    const tagHtml = g.type === 'birthday' ? `<span style="background: #ffeb3b; color: #f57f17; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 6px; display: inline-block;">🎂 ${g.birthdayYear} 生日願望</span>` : '';
     
     let actionsHtml = '';
     if (g.uid === currentUserId) {
@@ -155,6 +191,18 @@ window.renderGifts = function(gifts, currentUserId) {
           <button class="icon-btn" onclick="deleteGift('${g.id}')" title="刪除">🗑️</button>
         </div>
       `;
+    }
+
+    // 認領按鈕邏輯
+    let claimHtml = '';
+    if (g.uid !== currentUserId) {
+         if (g.claimedBy) {
+             claimHtml = `<div style="background: #e0f7fa; color: #00838f; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; margin-top: 10px; text-align: center;">🎁 此願望已被認領準備中！</div>`;
+         } else {
+             claimHtml = `<button onclick="claimGift('${g.id}')" style="margin-top: 10px; width: 100%; background: #4a4a4a; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold;">🙋‍♂️ 我來準備這個驚喜！</button>`;
+         }
+    } else {
+         claimHtml = `<div style="color: #999; font-size: 13px; margin-top: 10px; text-align: center;">⏳ 期待中... (系統會對您隱藏朋友的認領狀態)</div>`;
     }
 
     const avatarText = g.avatar || '😎';
@@ -174,6 +222,7 @@ window.renderGifts = function(gifts, currentUserId) {
           <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
         <div style="text-align: left;">
+          ${tagHtml}
           <p class="card-title" style="margin: 0 0 4px 0;">${g.name} 許願了</p>
           <p class="card-subtitle" style="margin: 0; color: #333; font-weight: bold; font-size: 16px;">${g.itemName}</p>
         </div>
@@ -183,7 +232,7 @@ window.renderGifts = function(gifts, currentUserId) {
         <div style="font-weight: 600; color: #ff6b6b; font-size: 15px;">預估價格：${priceText}</div>
         ${g.note ? `<div style="background: #f4f6f8; padding: 10px 12px; border-radius: 6px; font-size: 14px; color: #555; line-height: 1.5;">備註：${g.note}</div>` : ''}
         <div>${linkHtml}</div>
-      </div>
+        ${claimHtml} </div>
     `;
     list.appendChild(card);
   });
@@ -199,7 +248,6 @@ document.getElementById('open-trip-modal-btn')?.addEventListener('click', () => 
   tripModal.classList.add('active');
   document.body.classList.add('modal-open');
 });
-
 document.getElementById('close-trip-modal-btn')?.addEventListener('click', () => {
   tripModal.classList.remove('active');
   document.body.classList.remove('modal-open');
@@ -208,6 +256,10 @@ document.getElementById('close-trip-modal-btn')?.addEventListener('click', () =>
 const giftModal = document.getElementById('gift-modal');
 document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => {
   window.editingGiftId = null;
+  window.targetTripId = null;
+  document.getElementById('gift-type').value = 'general';
+  document.getElementById('gift-type').disabled = false; // 解鎖分類
+  document.getElementById('birthday-year-container').style.display = 'none';
   document.getElementById('add-gift-btn').textContent = "丟入許願池";
   document.getElementById('gift-modal-title').textContent = "新增許願商品";
   document.getElementById('gift-name').value = '';
@@ -217,16 +269,19 @@ document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => 
   giftModal.classList.add('active');
   document.body.classList.add('modal-open');
 });
-
 document.getElementById('close-gift-modal-btn')?.addEventListener('click', () => {
   giftModal.classList.remove('active');
   document.body.classList.remove('modal-open');
 });
 
-window.openProxyRequest = function(destination) {
+window.openProxyRequest = function(destination, tripId) {
   switchTab('gift');
   window.editingGiftId = null;
+  window.targetTripId = tripId; // 綁定行程 ID
   document.getElementById('gift-modal-title').textContent = `請託代購：${destination}`;
+  document.getElementById('gift-type').value = 'proxy'; 
+  document.getElementById('gift-type').disabled = true; // 鎖定不可改分類
+  document.getElementById('birthday-year-container').style.display = 'none';
   document.getElementById('gift-note').value = `綁定代購地點：${destination}`;
   giftModal.classList.add('active');
   document.body.classList.add('modal-open');
