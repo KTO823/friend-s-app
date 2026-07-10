@@ -1,3 +1,26 @@
+// 新手導覽控制
+window.onload = function() {
+  if (!localStorage.getItem('hasSeenTutorial')) {
+    document.getElementById('tutorial-modal').classList.add('active');
+    document.body.classList.add('modal-open');
+  }
+};
+
+window.closeTutorial = function() {
+  document.getElementById('tutorial-modal').classList.remove('active');
+  document.body.classList.remove('modal-open');
+  localStorage.setItem('hasSeenTutorial', 'true');
+};
+
+window.updateTutorialDots = function() {
+  const slider = document.getElementById('tutorial-slider');
+  const dots = document.getElementById('tutorial-dots').children;
+  const index = Math.round(slider.scrollLeft / slider.offsetWidth);
+  for(let i=0; i<dots.length; i++) {
+    dots[i].className = i === index ? 'dot active' : 'dot';
+  }
+};
+
 // 動態更新 Header 標題
 function switchTab(tabId) {
   document.getElementById('birthday-view').style.display = 'none';
@@ -88,7 +111,14 @@ window.renderTrips = function(trips, currentUserId) {
     return;
   }
 
-  trips.forEach(t => {
+  // 自動沉底邏輯：過期的行程排到最後面
+  const todayStr = new Date().toISOString().split('T')[0];
+  const activeTrips = trips.filter(t => t.date >= todayStr);
+  const pastTrips = trips.filter(t => t.date < todayStr);
+  const sortedTrips = [...activeTrips, ...pastTrips];
+
+  sortedTrips.forEach(t => {
+    const isPast = t.date < todayStr;
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.destination)}`;
     const avatarText = t.avatar || '😎';
     let avatarSize = '26px';
@@ -133,7 +163,6 @@ window.renderTrips = function(trips, currentUserId) {
             statusBtn = p.status === 'purchased' ? '✅ 朋友已買到' : '⏳ 尚未購買';
         }
 
-        // 幫代購也加上參考網址
         const proxyLink = p.link ? `<a href="${p.link}" target="_blank" style="color: #3b82f6; font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">🔗 參考網址</a>` : '';
 
         proxyHtml += `
@@ -150,14 +179,13 @@ window.renderTrips = function(trips, currentUserId) {
     }
 
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = isPast ? 'card archived' : 'card';
     card.style.flexDirection = 'column';
     card.style.alignItems = 'flex-start';
     
-    // ✨ 地點加上旅遊風藍色標籤
     card.innerHTML = `
       ${actionsHtml}
-      <div style="background: #eff6ff; color: #3b82f6; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px;">✈️ 即將啟程</div>
+      <div style="background: ${isPast ? '#f1f5f9' : '#eff6ff'}; color: ${isPast ? '#64748b' : '#3b82f6'}; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px;">${isPast ? '🏁 行程已結束' : '✈️ 即將啟程'}</div>
       
       <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 15px; padding-right: 50px; box-sizing: border-box;">
         <div class="avatar-circle">
@@ -197,7 +225,13 @@ window.renderGifts = function(gifts, currentUserId) {
     return;
   }
   
-  generalGifts.forEach(g => {
+  // 自動沉底邏輯：已經收到的禮物排到最後面
+  const activeGifts = generalGifts.filter(g => g.status !== 'received');
+  const receivedGifts = generalGifts.filter(g => g.status === 'received');
+  const sortedGifts = [...activeGifts, ...receivedGifts];
+
+  sortedGifts.forEach(g => {
+    const isReceived = g.status === 'received';
     const linkHtml = g.link ? `<a href="${g.link}" target="_blank" style="display: inline-block; margin-top: 4px; padding: 6px 12px; background-color: #f8fafc; color: #3b82f6; text-decoration: none; font-size: 13px; border-radius: 6px; font-weight: 600;">🔗 參考連結</a>` : '';
     const priceText = g.price ? `$${g.price}` : '未標價';
     const tagHtml = g.type === 'birthday' ? `<span style="background: #fdf2f8; color: #ec4899; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 12px; display: inline-block;">🎂 ${g.birthdayYear} 生日願望</span>` : '';
@@ -212,9 +246,8 @@ window.renderGifts = function(gifts, currentUserId) {
       `;
     }
 
-    // 🎁 加入「收到禮物」的結案狀態判斷
     let claimHtml = '';
-    if (g.status === 'received') {
+    if (isReceived) {
         if (g.uid === currentUserId) {
             claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 15px; text-align: center; border: 1px solid #bbf7d0;">🎉 願望已達成！已順利收到禮物啦</div>`;
         } else {
@@ -253,12 +286,9 @@ window.renderGifts = function(gifts, currentUserId) {
     else if (avatarText.length >= 3) avatarSize = '20px';
 
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = isReceived ? 'card archived' : 'card';
     card.style.flexDirection = 'column';
     card.style.alignItems = 'flex-start';
-    
-    // 若已收到，讓卡片稍微變暗淡一點
-    if (g.status === 'received') card.style.opacity = '0.7';
 
     card.innerHTML = `
       ${actionsHtml}

@@ -8,6 +8,44 @@
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body>
+  <!-- 新手導覽視窗 -->
+  <div id="tutorial-modal" class="tutorial-overlay">
+    <div class="tutorial-content">
+      <button class="close-tutorial-btn" onclick="closeTutorial()">✕</button>
+      <div class="tutorial-slider" id="tutorial-slider" onscroll="updateTutorialDots()">
+        <div class="tutorial-slide">
+          <div style="font-size: 50px; margin-bottom: 10px;">✨</div>
+          <h2 style="margin:0 0 10px 0; color:#333;">歡迎使用卡戳</h2>
+          <p style="color:#666; font-size:15px; line-height:1.6;">這是一個專為你們打造的專屬空間。<br>完美結合生日記錄、許願池與代購功能。<br><br><span style="color:#3b82f6; font-weight:bold;">向左滑動 👉 來看看怎麼用吧！</span></p>
+        </div>
+        <div class="tutorial-slide">
+          <div style="font-size: 50px; margin-bottom: 10px;">🎂</div>
+          <h2 style="margin:0 0 10px 0; color:#f97316;">生日倒數</h2>
+          <p style="color:#666; font-size:15px; line-height:1.6;">系統會自動算出誰的生日最接近，<br>並幫他戴上專屬皇冠！<br>記得先在「設定」填好自己的生日喔。</p>
+        </div>
+        <div class="tutorial-slide">
+          <div style="font-size: 50px; margin-bottom: 10px;">🎁</div>
+          <h2 style="margin:0 0 10px 0; color:#ec4899;">許願池與禮物</h2>
+          <p style="color:#666; font-size:15px; line-height:1.6;">平時想要什麼動漫周邊或好物直接丟上來！<br>朋友可以「偷偷認領」，為你保留驚喜感。<br>收到禮物後記得回來點擊確認結案。</p>
+        </div>
+        <div class="tutorial-slide">
+          <div style="font-size: 50px; margin-bottom: 10px;">✈️</div>
+          <h2 style="margin:0 0 10px 0; color:#3b82f6;">行程與代購</h2>
+          <p style="color:#666; font-size:15px; line-height:1.6;">要去日本實習或旅遊？提早公佈行程！<br>內建自動抓取匯率功能。<br>朋友許願代購後，會直接綁定在行程下方。</p>
+        </div>
+        <div class="tutorial-slide">
+          <div style="font-size: 50px; margin-bottom: 10px;">💰</div>
+          <h2 style="margin:0 0 10px 0; color:#16a34a;">準備開始</h2>
+          <p style="color:#666; font-size:15px; line-height:1.6;">準備好同步你們的日常軌跡了嗎？<br>現在，先去綁定你的專屬暱稱與收款帳號吧！</p>
+          <button onclick="closeTutorial()" style="background: #333; color: white; border: none; padding: 12px 30px; border-radius: 20px; font-size: 15px; margin-top: 15px; cursor: pointer; font-weight: bold; width: 100%;">開始使用 🚀</button>
+        </div>
+      </div>
+      <div class="tutorial-dots" id="tutorial-dots">
+        <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="app-container">
     <header>
       <h1 id="main-header-title">🎂 生日倒數</h1>
@@ -410,10 +448,15 @@
       try { await updateDoc(doc(db, "gifts", giftId), { status: 'purchased' }); } catch(e) { alert("標記失敗：" + e.message); }
     };
 
-    // ✨ 新增：確認收到禮物的函數
+    // 補上確認收到禮物的 Bug 修復
     window.confirmGiftReceived = async function(giftId) {
       if(!confirm("確定已經收到這個禮物了嗎？恭喜！")) return;
-      try { await updateDoc(doc(db, "gifts", giftId), { status: 'received' }); } catch(e) { alert("標記失敗：" + e.message); }
+      try { 
+        await updateDoc(doc(db, "gifts", giftId), { status: 'received' }); 
+        alert("已成功標記為收到！");
+      } catch(e) { 
+        alert("標記失敗：" + e.message); 
+      }
     };
 
     window.editTrip = function(id) {
