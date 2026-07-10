@@ -13,7 +13,19 @@
     </header>
 
     <main>
-      <div id="birthday-view" class="view">🎂 生日倒數功能開發中...</div>
+      <div id="birthday-view" class="view">
+        <h2>🎂 生日倒數</h2>
+        
+        <div class="input-section">
+          <input type="text" id="bd-name" placeholder="朋友名稱" class="form-input">
+          <input type="date" id="bd-date" class="form-input">
+          <button onclick="addBirthday()" class="primary-btn">新增生日</button>
+        </div>
+
+        <div id="birthday-list" class="card-list">
+          </div>
+      </div>
+
       <div id="gift-view" class="view" style="display: none;">🎁 禮物清單功能開發中...</div>
       <div id="debt-view" class="view" style="display: none;">💰 債務紀錄功能開發中...</div>
       
@@ -29,13 +41,23 @@
           <p>目前登入：<span id="user-email"></span></p>
           
           <div class="input-group">
-            <label>自定義名稱：</label>
-            <input type="text" id="custom-name" placeholder="輸入你的暱稱">
+            <label>自定義暱稱：</label>
+            <input type="text" id="profile-name" placeholder="輸入你們之間的稱呼">
           </div>
           
           <div class="input-group">
-            <label>頭像 (Emoji/顏文字)：</label>
-            <input type="text" id="custom-avatar" placeholder="例如：😎 或 (≧▽≦)">
+            <label>專屬頭像 (Emoji/顏文字)：</label>
+            <input type="text" id="profile-avatar" placeholder="例如：😎 或 ✧(・∀・)✧">
+          </div>
+
+          <div class="input-group">
+            <label>我的生日：</label>
+            <input type="date" id="profile-birthday">
+          </div>
+
+          <div class="input-group">
+            <label>收款方式 (銀行帳號或 LINE Pay 連結)：</label>
+            <input type="text" id="profile-payment" placeholder="方便朋友直接複製轉帳">
           </div>
           
           <button id="save-profile-btn" class="primary-btn">儲存設定</button>
