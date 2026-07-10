@@ -29,33 +29,45 @@ window.renderBirthdaysFromData = function(users) {
   users.sort((a, b) => calculateDaysLeft(a.birthday) - calculateDaysLeft(b.birthday));
   
   let count = 0;
+  let isFirst = true; // 用來判斷是不是最靠近的生日
+
   users.forEach(u => {
     if (!u.birthday) return;
     count++;
     const daysLeft = calculateDaysLeft(u.birthday);
     let daysText = daysLeft === 0 ? "就是今天！" : `剩 ${daysLeft} 天`;
+    
+    // 判斷是否為第一名
+    const isClosest = isFirst;
+    isFirst = false;
+
     let daysColor = daysLeft <= 7 ? "#ff6b6b" : "#4a4a4a";
+    if (isClosest) daysColor = "#ff9f43"; // 第一名使用專屬亮橘色
     
     // 動態計算頭像字體大小
     const avatarText = u.avatar || '😎';
-    let avatarSize = '26px'; // 單一 Emoji 預設大小
-    if (avatarText.length >= 8) avatarSize = '12px'; // 長顏文字
+    let avatarSize = '26px';
+    if (avatarText.length >= 8) avatarSize = '12px';
     else if (avatarText.length >= 5) avatarSize = '16px'; 
     else if (avatarText.length >= 3) avatarSize = '20px';
     
+    // 如果是第一名，加上皇冠與專屬 Class
+    const displayName = isClosest ? `👑 ${u.name}` : u.name;
+    const cardClass = isClosest ? 'card closest-birthday' : 'card';
+
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = cardClass;
     card.innerHTML = `
       <div style="display: flex; align-items: center; gap: 15px;">
         <div class="avatar-circle">
           <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
         <div>
-          <p class="card-title">${u.name}</p>
+          <p class="card-title" style="${isClosest ? 'font-weight: bold; color: #ff9f43;' : ''}">${displayName}</p>
           <p class="card-subtitle">${u.birthday}</p>
         </div>
       </div>
-      <div class="countdown" style="color: ${daysColor}; font-weight: bold;">${daysText}</div>
+      <div class="countdown" style="color: ${daysColor}; font-weight: bold; font-size: ${isClosest ? '24px' : '20px'};">${daysText}</div>
     `;
     list.appendChild(card);
   });
