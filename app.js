@@ -222,10 +222,10 @@ window.renderGifts = function(gifts, currentUserId) {
          // 自己的願望 (壽星本人視角)
          if (g.claimedBy) {
              // 已有人認領，但隱藏是誰
-             claimHtml = `<div style="color: #f97316; font-size: 13px; margin-top: 15px; text-align: center; font-weight: bold;">🎉 神秘小精靈已認領準備中！敬請期待</div>`;
+             claimHtml = `<div style="color: #f97316; font-size: 13px; margin-top: 15px; text-align: center; font-weight: bold;">🎉 有神奇人類已認領！敬請期待</div>`;
          } else {
              // 沒人認領
-             claimHtml = `<div style="color: #94a3b8; font-size: 13px; margin-top: 15px; text-align: center; font-style: italic;">⏳ 期待中...</div>`;
+             claimHtml = `<div style="color: #94a3b8; font-size: 13px; margin-top: 15px; text-align: center; font-style: italic;">⏳ 尚未有人認領...</div>`;
          }
     }
 
@@ -253,7 +253,7 @@ window.renderGifts = function(gifts, currentUserId) {
       </div>
 
       <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left;">
-        <div style="font-weight: 600; color: #ef4444; font-size: 15px;">預估價格：${priceText}</div>
+        <div style="font-weight: 600; color: #fb7171; font-size: 15px;">預估價格：${priceText}</div>
         ${g.note ? `<div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 14px; color: #475569; line-height: 1.5;">備註：${g.note}</div>` : ''}
         <div>${linkHtml}</div>
         ${claimHtml}
