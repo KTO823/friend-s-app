@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>朋友圈管理工具</title>
   <link rel="stylesheet" href="app.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body>
   <div id="app-container">
@@ -21,7 +22,21 @@
       </div>
 
       <div id="gift-view" class="view" style="display: none;">🎁 禮物清單功能開發中...</div>
-      <div id="debt-view" class="view" style="display: none;">💰 債務紀錄功能開發中...</div>
+      
+      <div id="trip-view" class="view" style="display: none;">
+        <h2>✈️ 行程與代購公佈欄</h2>
+        
+        <div class="input-section" id="trip-input-section" style="display: none;">
+          <input type="text" id="trip-dest" class="form-input" placeholder="要去哪裡？ (例：秋葉原、大阪環球影城)">
+          <input type="date" id="trip-date" class="form-input">
+          <input type="text" id="trip-note" class="form-input" placeholder="代購備註 (例：匯率0.23，不代購體積太大的)">
+          <button id="add-trip-btn" class="primary-btn">發佈行程並寄信通知大家</button>
+        </div>
+        <p id="trip-login-hint" style="text-align: center; color: #999;">請先至「設定」登入後才能發佈行程</p>
+
+        <div id="trip-list" class="card-list" style="margin-top: 20px;">
+          </div>
+      </div>
       
       <div id="settings-view" class="view" style="display: none;">
         <h2>⚙️ 個人設定</h2>
@@ -51,8 +66,7 @@
 
           <div class="input-group">
             <label>收款方式：</label>
-            <div id="payment-methods-container">
-              </div>
+            <div id="payment-methods-container"></div>
             <button id="add-payment-btn" class="secondary-btn" style="margin-top: 10px;">＋ 新增收款方式</button>
           </div>
           
@@ -65,15 +79,21 @@
     <nav>
       <button onclick="switchTab('birthday')">生日</button>
       <button onclick="switchTab('gift')">禮物</button>
-      <button onclick="switchTab('debt')">債務</button>
+      <button onclick="switchTab('trip')">行程代購</button>
       <button onclick="switchTab('settings')">設定</button>
     </nav>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, collection, getDocs, getDoc, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // --- 在這裡填入你的 EmailJS 金鑰 ---
+    emailjs.init("YOUR_PUBLIC_KEY"); 
+    const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
+    const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
+    // ------------------------------------
 
     const firebaseConfig = {
       apiKey: "AIzaSyCsG7ucrwAgoacvzMbxxeOV6-L9s_UxQLU",
@@ -81,8 +101,7 @@
       projectId: "birthday-gifts-and-debt",
       storageBucket: "birthday-gifts-and-debt.firebasestorage.app",
       messagingSenderId: "833409590607",
-      appId: "1:833409590607:web:f31bacf2232c591b98d13a",
-      measurementId: "G-XK9XD971LZ"
+      appId: "1:833409590607:web:f31bacf2232c591b98d13a"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -90,20 +109,14 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // 登入登出
-    document.getElementById('login-btn').addEventListener('click', () => {
-      signInWithPopup(auth, provider).catch(error => alert("登入失敗：" + error.message));
-    });
+    document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider));
     document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-    // 動態新增收款方式
-    // 1. 動態新增收款方式 (加入銀行代號欄位與連動顯示)
+    // 動態新增收款方式 (包含銀行代號)
     window.addPaymentRow = function(type = '銀行帳號', code = '', value = '') {
       const container = document.getElementById('payment-methods-container');
       const row = document.createElement('div');
       row.className = 'payment-row';
-      
-      // 當選擇 LINE Pay 時，隱藏銀行代號的格子
       row.innerHTML = `
         <select class="pay-type" onchange="
           const isBank = this.value === '銀行帳號';
@@ -113,106 +126,138 @@
           <option value="銀行帳號" ${type === '銀行帳號' ? 'selected' : ''}>銀行帳號</option>
           <option value="LINE Pay" ${type === 'LINE Pay' ? 'selected' : ''}>LINE Pay</option>
         </select>
-        <input type="text" class="bank-code" value="${code}" placeholder="代號(如812)" style="width: 95px; display: ${type === '銀行帳號' ? 'block' : 'none'};">
+        <input type="text" class="bank-code" value="${code}" placeholder="代號" style="width: 70px; display: ${type === '銀行帳號' ? 'block' : 'none'};">
         <input type="text" class="pay-value" value="${value}" placeholder="${type === '銀行帳號' ? '請輸入帳號' : '貼上轉帳連結'}" style="flex: 1;">
         <button class="delete-btn" onclick="this.parentElement.remove()">刪除</button>
       `;
       container.appendChild(row);
     };
-
-    // 綁定新增按鈕
     document.getElementById('add-payment-btn').addEventListener('click', () => window.addPaymentRow());
 
     // 儲存設定
     document.getElementById('save-profile-btn').addEventListener('click', async () => {
       const user = auth.currentUser;
       if (!user) return alert("請先登入！");
-
       const name = document.getElementById('profile-name').value;
       const avatar = document.getElementById('profile-avatar').value || "😎";
       const birthday = document.getElementById('profile-birthday').value;
 
-      // 2. 收集所有填寫的收款方式 (包含代號)
-      const paymentRows = document.querySelectorAll('.payment-row');
       const payments = [];
-      paymentRows.forEach(row => {
+      document.querySelectorAll('.payment-row').forEach(row => {
         const type = row.querySelector('.pay-type').value;
         const code = row.querySelector('.bank-code').value;
         const value = row.querySelector('.pay-value').value;
-        if (value.trim() !== '') {
-          payments.push({ type: type, code: code, value: value });
-        }
+        if (value.trim() !== '') payments.push({ type, code, value });
       });
 
-      if (!name || !birthday) {
-        alert("名稱和生日一定要填喔！");
-        return;
-      }
-
-      // 顯示儲存中狀態
-      const saveBtn = document.getElementById('save-profile-btn');
-      saveBtn.textContent = "儲存中...";
-      saveBtn.disabled = true;
-
+      if (!name || !birthday) return alert("名稱和生日一定要填喔！");
+      document.getElementById('save-profile-btn').textContent = "儲存中...";
+      
       try {
-        await setDoc(doc(db, "users", user.uid), {
-          name: name,
-          avatar: avatar,
-          birthday: birthday,
-          payments: payments,
-          email: user.email
-        });
-        alert("設定已成功儲存！"); // 看到這個才代表真正存進去了！
+        await setDoc(doc(db, "users", user.uid), { name, avatar, birthday, payments, email: user.email });
+        alert("設定已成功儲存！");
         if (window.loadBirthdays) window.loadBirthdays();
       } catch (error) {
         alert("儲存失敗：" + error.message);
       } finally {
-        saveBtn.textContent = "儲存設定";
-        saveBtn.disabled = false;
+        document.getElementById('save-profile-btn').textContent = "儲存設定";
       }
     });
 
-    // 抓取生日資料
+    // 載入生日
     window.loadBirthdays = async function() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const usersData = [];
-        querySnapshot.forEach((doc) => usersData.push(doc.data()));
-        if (window.renderBirthdaysFromData) {
-          window.renderBirthdaysFromData(usersData);
-        }
-      } catch (error) {
-        console.error("載入失敗：", error);
-      }
+      const q = await getDocs(collection(db, "users"));
+      const usersData = [];
+      q.forEach(doc => usersData.push(doc.data()));
+      if (window.renderBirthdaysFromData) window.renderBirthdaysFromData(usersData);
     };
 
-    // 監聽登入狀態
+    // 發佈行程與寄信
+    document.getElementById('add-trip-btn').addEventListener('click', async () => {
+      const user = auth.currentUser;
+      const dest = document.getElementById('trip-dest').value;
+      const date = document.getElementById('trip-date').value;
+      const note = document.getElementById('trip-note').value;
+
+      if (!dest || !date) return alert("地點和日期一定要填！");
+      
+      const btn = document.getElementById('add-trip-btn');
+      btn.textContent = "發佈中並寄信...";
+      btn.disabled = true;
+
+      try {
+        // 1. 抓取發佈者的自訂名稱
+        const myDoc = await getDoc(doc(db, "users", user.uid));
+        const myName = myDoc.exists() ? myDoc.data().name : "朋友";
+        const myAvatar = myDoc.exists() ? myDoc.data().avatar : "😎";
+
+        // 2. 存入資料庫
+        await addDoc(collection(db, "trips"), {
+          uid: user.uid,
+          name: myName,
+          avatar: myAvatar,
+          destination: dest,
+          date: date,
+          note: note,
+          createdAt: new Date()
+        });
+
+        // 3. 抓取其他人的 Email 並寄信
+        const usersSnap = await getDocs(collection(db, "users"));
+        usersSnap.forEach(u => {
+          const friendEmail = u.data().email;
+          if (friendEmail && friendEmail !== user.email) {
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+              sender_name: myName,
+              destination: dest,
+              to_email: friendEmail
+            }).catch(err => console.error("寄信失敗", err));
+          }
+        });
+
+        alert("行程已發佈！通知信已寄出 🚀");
+        document.getElementById('trip-dest').value = '';
+        document.getElementById('trip-date').value = '';
+        document.getElementById('trip-note').value = '';
+      } catch (error) {
+        alert("發佈失敗：" + error.message);
+      } finally {
+        btn.textContent = "發佈行程並寄信通知大家";
+        btn.disabled = false;
+      }
+    });
+
+    // 即時監聽行程列表
+    onSnapshot(query(collection(db, "trips"), orderBy("createdAt", "desc")), (snapshot) => {
+      const trips = [];
+      snapshot.forEach(doc => trips.push(doc.data()));
+      if (window.renderTrips) window.renderTrips(trips);
+    });
+
+    // 監聽登入
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('profile-section').style.display = 'block';
+        document.getElementById('trip-input-section').style.display = 'block';
+        document.getElementById('trip-login-hint').style.display = 'none';
         document.getElementById('user-email').textContent = user.email;
         
-        try {
-          const docSnap = await getDoc(doc(db, "users", user.uid));
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById('profile-name').value = data.name || "";
-            document.getElementById('profile-avatar').value = data.avatar || "";
-            document.getElementById('profile-birthday').value = data.birthday || "";
-            
-            document.getElementById('payment-methods-container').innerHTML = '';
-            if (data.payments && data.payments.length > 0) {
-              data.payments.forEach(p => window.addPaymentRow(p.type, p.code || '', p.value));
-            }
-          }
-        } catch (error) {
-          console.error("讀取個人資料失敗", error);
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          document.getElementById('profile-name').value = data.name || "";
+          document.getElementById('profile-avatar').value = data.avatar || "";
+          document.getElementById('profile-birthday').value = data.birthday || "";
+          document.getElementById('payment-methods-container').innerHTML = '';
+          if (data.payments) data.payments.forEach(p => window.addPaymentRow(p.type, p.code || '', p.value));
         }
         window.loadBirthdays();
       } else {
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('profile-section').style.display = 'none';
+        document.getElementById('trip-input-section').style.display = 'none';
+        document.getElementById('trip-login-hint').style.display = 'block';
       }
     });
   </script>
