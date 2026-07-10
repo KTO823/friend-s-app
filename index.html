@@ -22,38 +22,16 @@
       </div>
 
       <div id="gift-view" class="view" style="display: none;">
-        <h2>🎁 許願池</h2>
+        <h2>🎁 許願池與禮物清單</h2>
         <p id="gift-login-hint" style="text-align: center; color: #999;">請先登入才能查看或新增許願</p>
-
-        <div id="gift-list" class="card-list">
-          </div>
-
+        <div id="gift-list" class="card-list"></div>
         <button id="open-gift-modal-btn" class="fab-btn" style="display: none;">＋</button>
-      </div>
-
-      <div id="gift-modal" class="modal-overlay">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 id="gift-modal-title">新增許願商品</h3>
-            <button id="close-gift-modal-btn" class="close-modal-btn">✕</button>
-          </div>
-          <div class="input-section" style="margin-bottom: 0; border: none; padding: 0;">
-            <input type="text" id="gift-name" class="form-input" placeholder="商品名稱 (例：金髮毛衣男的壓克力立牌)">
-            <input type="text" id="gift-link" class="form-input" placeholder="參考網址或圖片連結 (選填)">
-            <input type="number" id="gift-price" class="form-input" placeholder="大約價格 (選填)">
-            <input type="text" id="gift-note" class="form-input" placeholder="備註 (例：請幫我在駿河屋找找)">
-            <button id="add-gift-btn" class="primary-btn">丟入許願池</button>
-          </div>
-        </div>
       </div>
       
       <div id="trip-view" class="view" style="display: none;">
         <h2>✈️ 行程與代購</h2>
         <p id="trip-login-hint" style="text-align: center; color: #999;">請先至「設定」登入後才能看見與發佈行程</p>
-
-        <div id="trip-list" class="card-list">
-          </div>
-
+        <div id="trip-list" class="card-list"></div>
         <button id="open-trip-modal-btn" class="fab-btn" style="display: none;">＋</button>
       </div>
 
@@ -66,44 +44,80 @@
           <div class="input-section" style="margin-bottom: 0; border: none; padding: 0;">
             <input type="text" id="trip-dest" class="form-input" placeholder="要去哪裡？ (例：秋葉原)">
             <input type="date" id="trip-date" class="form-input">
-            <input type="text" id="trip-note" class="form-input" placeholder="代購備註 (例：匯率0.23)">
+
+            <div style="margin-bottom: 15px; display: flex; gap: 15px; font-size: 15px; color: #333; justify-content: center;">
+              <label><input type="radio" name="trip-type" value="domestic" checked onchange="toggleExchangeOptions()"> 國內行程</label>
+              <label><input type="radio" name="trip-type" value="international" onchange="toggleExchangeOptions()"> 國外行程</label>
+            </div>
+
+            <div id="exchange-rate-section" style="display: none; background: #f0f4f8; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: left;">
+               <label style="font-size: 13px; color: #666; margin-bottom: 5px; display: block;">選擇國家/幣值：</label>
+               <select id="trip-currency" class="form-input" onchange="updateRatePreview()">
+                 <option value="JPY">🇯🇵 日幣 (JPY)</option>
+                 <option value="KRW">🇰🇷 韓元 (KRW)</option>
+                 <option value="USD">🇺🇸 美金 (USD)</option>
+                 <option value="EUR">🇪🇺 歐元 (EUR)</option>
+               </select>
+
+               <label style="font-size: 13px; color: #666; margin-bottom: 5px; display: block;">匯率計算方式：</label>
+               <select id="trip-rate-mode" class="form-input" onchange="updateRatePreview()">
+                 <option value="publish">發佈當天 (鎖定當前即時匯率)</option>
+                 <option value="purchase">購買當天 (代購完成時自動結算)</option>
+                 <option value="custom">自訂固定匯率</option>
+               </select>
+
+               <div id="custom-rate-container" style="display: none; margin-top: 10px;">
+                  <input type="number" id="trip-custom-rate" class="form-input" placeholder="輸入自訂匯率 (例如：0.215)" step="0.001">
+               </div>
+               <p id="rate-preview" style="font-size: 13px; color: #d35400; margin: 10px 0 0 0; font-weight: bold; line-height: 1.4;"></p>
+            </div>
+
+            <input type="text" id="trip-note" class="form-input" placeholder="代購備註 (例：不代購體積太大的)">
             <button id="add-trip-btn" class="primary-btn">發佈行程並寄信通知</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="gift-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="gift-modal-title">新增許願商品</h3>
+            <button id="close-gift-modal-btn" class="close-modal-btn">✕</button>
+          </div>
+          <div class="input-section" style="margin-bottom: 0; border: none; padding: 0;">
+            <input type="text" id="gift-name" class="form-input" placeholder="商品名稱 (例：星街彗星 壓克力立牌)">
+            <input type="text" id="gift-link" class="form-input" placeholder="參考網址或圖片連結 (選填)">
+            <input type="number" id="gift-price" class="form-input" placeholder="大約價格 (選填)">
+            <input type="text" id="gift-note" class="form-input" placeholder="備註 (例：請幫我在秋葉原找找)">
+            <button id="add-gift-btn" class="primary-btn">丟入許願池</button>
           </div>
         </div>
       </div>
       
       <div id="settings-view" class="view" style="display: none;">
         <h2>⚙️ 個人設定</h2>
-        
         <div id="login-section">
-          <p>請先登入才能使用完整功能</p>
           <button id="login-btn" class="primary-btn">用 Google 登入</button>
         </div>
-
         <div id="profile-section" style="display: none;">
           <p>目前登入：<span id="user-email"></span></p>
-          
           <div class="input-group">
             <label>自定義暱稱：</label>
             <input type="text" id="profile-name" placeholder="輸入你們之間的稱呼">
           </div>
-          
           <div class="input-group">
             <label>專屬頭像 (Emoji/顏文字)：</label>
-            <input type="text" id="profile-avatar" placeholder="例如：😎 或 ✧(・∀・)✧">
+            <input type="text" id="profile-avatar" placeholder="例如：😎">
           </div>
-
           <div class="input-group">
             <label>我的生日：</label>
             <input type="date" id="profile-birthday">
           </div>
-
           <div class="input-group">
             <label>收款方式：</label>
             <div id="payment-methods-container"></div>
             <button id="add-payment-btn" class="secondary-btn" style="margin-top: 10px;">＋ 新增收款方式</button>
           </div>
-          
           <button id="save-profile-btn" class="primary-btn" style="margin-top: 20px;">儲存設定</button>
           <button id="logout-btn" class="secondary-btn" style="margin-top: 20px;">登出</button>
         </div>
@@ -123,10 +137,10 @@
     import { getFirestore, doc, setDoc, collection, getDocs, getDoc, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    // --- 在這裡填入你的 EmailJS 金鑰 ---
-    emailjs.init("YOUR_PUBLIC_KEY"); 
-    const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
-    const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
+    // --- 請填入你的 EmailJS 金鑰 ---
+    emailjs.init("bsabF8ne0dAqVxF-D"); 
+    const EMAILJS_SERVICE_ID = "Birthday_gifts_and_debt";
+    const EMAILJS_TEMPLATE_ID = "template_nctmqgd";
     // ------------------------------------
 
     const firebaseConfig = {
@@ -146,10 +160,70 @@
     document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider));
     document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-    // 控制彈出視窗的開關
-    const modal = document.getElementById('trip-modal');
-    document.getElementById('open-trip-modal-btn').addEventListener('click', () => modal.classList.add('active'));
-    document.getElementById('close-trip-modal-btn').addEventListener('click', () => modal.classList.remove('active'));
+    // --- 匯率切換與即時抓取邏輯 ---
+    window.currentFetchedRate = 0;
+    
+    window.toggleExchangeOptions = function() {
+      const isIntl = document.querySelector('input[name="trip-type"]:checked').value === 'international';
+      document.getElementById('exchange-rate-section').style.display = isIntl ? 'block' : 'none';
+      if(isIntl) window.updateRatePreview();
+    };
+
+    window.updateRatePreview = async function() {
+      const mode = document.getElementById('trip-rate-mode').value;
+      const currency = document.getElementById('trip-currency').value;
+      const customContainer = document.getElementById('custom-rate-container');
+      const preview = document.getElementById('rate-preview');
+
+      customContainer.style.display = (mode === 'custom') ? 'block' : 'none';
+
+      if (mode === 'custom') {
+        preview.textContent = "💡 將使用您下方輸入的固定匯率計算";
+      } else if (mode === 'publish') {
+        preview.textContent = "⏳ 正在即時連線取得最新匯率...";
+        try {
+          const res = await fetch('https://open.er-api.com/v6/latest/' + currency);
+          const data = await res.json();
+          window.currentFetchedRate = data.rates.TWD;
+          preview.textContent = `✅ 最新真實匯率：1 ${currency} = ${window.currentFetchedRate.toFixed(4)} TWD\n(發佈後將永久鎖定此匯率)`;
+        } catch (e) {
+          preview.textContent = "❌ 無法取得匯率，請稍後再試或使用自訂匯率";
+        }
+      } else if (mode === 'purchase') {
+         preview.textContent = "💡 將於朋友按下「完成代購」時，系統自動抓取當天匯率結算";
+      }
+    };
+    // ----------------------------
+
+    const tripModal = document.getElementById('trip-modal');
+    document.getElementById('open-trip-modal-btn')?.addEventListener('click', () => {
+      tripModal.classList.add('active');
+      document.body.classList.add('modal-open');
+    });
+    document.getElementById('close-trip-modal-btn')?.addEventListener('click', () => {
+      tripModal.classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
+
+    const giftModal = document.getElementById('gift-modal');
+    document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => {
+      document.getElementById('gift-modal-title').textContent = "新增許願商品";
+      document.getElementById('gift-note').value = ""; 
+      giftModal.classList.add('active');
+      document.body.classList.add('modal-open');
+    });
+    document.getElementById('close-gift-modal-btn')?.addEventListener('click', () => {
+      giftModal.classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
+
+    window.openProxyRequest = function(destination) {
+      switchTab('gift');
+      document.getElementById('gift-modal-title').textContent = `請託代購：${destination}`;
+      document.getElementById('gift-note').value = `綁定代購地點：${destination}`;
+      giftModal.classList.add('active');
+      document.body.classList.add('modal-open');
+    };
 
     window.addPaymentRow = function(type = '銀行帳號', code = '', value = '') {
       const container = document.getElementById('payment-methods-container');
@@ -178,7 +252,6 @@
       const name = document.getElementById('profile-name').value;
       const avatar = document.getElementById('profile-avatar').value || "😎";
       const birthday = document.getElementById('profile-birthday').value;
-
       const payments = [];
       document.querySelectorAll('.payment-row').forEach(row => {
         const type = row.querySelector('.pay-type').value;
@@ -186,10 +259,9 @@
         const value = row.querySelector('.pay-value').value;
         if (value.trim() !== '') payments.push({ type, code, value });
       });
-
       if (!name || !birthday) return alert("名稱和生日一定要填喔！");
-      document.getElementById('save-profile-btn').textContent = "儲存中...";
       
+      document.getElementById('save-profile-btn').textContent = "儲存中...";
       try {
         await setDoc(doc(db, "users", user.uid), { name, avatar, birthday, payments, email: user.email });
         alert("設定已成功儲存！");
@@ -208,65 +280,32 @@
       if (window.renderBirthdaysFromData) window.renderBirthdaysFromData(usersData);
     };
 
-    // 儲存禮物許願
-    document.getElementById('add-gift-btn')?.addEventListener('click', async () => {
-      const user = auth.currentUser;
-      const itemName = document.getElementById('gift-name').value;
-      const itemLink = document.getElementById('gift-link').value;
-      const itemPrice = document.getElementById('gift-price').value;
-      const itemNote = document.getElementById('gift-note').value;
-
-      if (!itemName) return alert("至少要填寫商品名稱喔！");
-      
-      const btn = document.getElementById('add-gift-btn');
-      btn.textContent = "丟入中...";
-      btn.disabled = true;
-
-      try {
-        const myDoc = await getDoc(doc(db, "users", user.uid));
-        const myName = myDoc.exists() ? myDoc.data().name : "朋友";
-        const myAvatar = myDoc.exists() ? myDoc.data().avatar : "😎";
-
-        await addDoc(collection(db, "gifts"), {
-          uid: user.uid,
-          name: myName,
-          avatar: myAvatar,
-          itemName: itemName,
-          link: itemLink,
-          price: itemPrice,
-          note: itemNote,
-          createdAt: new Date()
-        });
-
-        alert("已成功丟入許願池！");
-        document.getElementById('gift-name').value = '';
-        document.getElementById('gift-link').value = '';
-        document.getElementById('gift-price').value = '';
-        document.getElementById('gift-note').value = '';
-        document.getElementById('gift-modal').classList.remove('active');
-      } catch (error) {
-        alert("新增失敗：" + error.message);
-      } finally {
-        btn.textContent = "丟入許願池";
-        btn.disabled = false;
-      }
-    });
-
-    // 即時監聽禮物清單
-    onSnapshot(query(collection(db, "gifts"), orderBy("createdAt", "desc")), (snapshot) => {
-      const gifts = [];
-      snapshot.forEach(doc => gifts.push(doc.data()));
-      if (window.renderGifts) window.renderGifts(gifts);
-    });
-
+    // --- 發佈行程 (包含儲存匯率邏輯) ---
     document.getElementById('add-trip-btn').addEventListener('click', async () => {
       const user = auth.currentUser;
       const dest = document.getElementById('trip-dest').value;
       const date = document.getElementById('trip-date').value;
       const note = document.getElementById('trip-note').value;
+      const tripType = document.querySelector('input[name="trip-type"]:checked').value;
 
       if (!dest || !date) return alert("地點和日期一定要填！");
       
+      let exchangeInfo = null;
+      if (tripType === 'international') {
+         const mode = document.getElementById('trip-rate-mode').value;
+         const currency = document.getElementById('trip-currency').value;
+         let rate = null;
+
+         if (mode === 'publish') {
+           rate = window.currentFetchedRate;
+         } else if (mode === 'custom') {
+           rate = parseFloat(document.getElementById('trip-custom-rate').value);
+           if (isNaN(rate)) return alert("請輸入正確的數字作為自訂匯率！");
+         }
+
+         exchangeInfo = { mode, currency, rate };
+      }
+
       const btn = document.getElementById('add-trip-btn');
       btn.textContent = "發佈中...";
       btn.disabled = true;
@@ -283,9 +322,12 @@
           destination: dest,
           date: date,
           note: note,
+          tripType: tripType,
+          exchangeInfo: exchangeInfo,
           createdAt: new Date()
         });
 
+        // 寄信通知
         const usersSnap = await getDocs(collection(db, "users"));
         usersSnap.forEach(u => {
           const friendEmail = u.data().email;
@@ -300,15 +342,43 @@
 
         alert("行程已發佈！");
         document.getElementById('trip-dest').value = '';
-        document.getElementById('trip-date').value = '';
-        document.getElementById('trip-note').value = '';
-        
-        // 發佈成功後自動關閉視窗
-        modal.classList.remove('active');
+        tripModal.classList.remove('active');
+        document.body.classList.remove('modal-open');
       } catch (error) {
         alert("發佈失敗：" + error.message);
       } finally {
-        btn.textContent = "發佈行程並寄信通知";
+        btn.textContent = "發佈行程";
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('add-gift-btn')?.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      const itemName = document.getElementById('gift-name').value;
+      const itemLink = document.getElementById('gift-link').value;
+      const itemPrice = document.getElementById('gift-price').value;
+      const itemNote = document.getElementById('gift-note').value;
+      if (!itemName) return alert("至少要填寫商品名稱喔！");
+      const btn = document.getElementById('add-gift-btn');
+      btn.textContent = "丟入中...";
+      btn.disabled = true;
+      try {
+        const myDoc = await getDoc(doc(db, "users", user.uid));
+        await addDoc(collection(db, "gifts"), {
+          uid: user.uid,
+          name: myDoc.exists() ? myDoc.data().name : "朋友",
+          avatar: myDoc.exists() ? myDoc.data().avatar : "😎",
+          itemName, link: itemLink, price: itemPrice, note: itemNote,
+          createdAt: new Date()
+        });
+        alert("已成功丟入許願池！");
+        document.getElementById('gift-name').value = '';
+        giftModal.classList.remove('active');
+        document.body.classList.remove('modal-open');
+      } catch (error) {
+        alert("新增失敗：" + error.message);
+      } finally {
+        btn.textContent = "丟入許願池";
         btn.disabled = false;
       }
     });
@@ -319,12 +389,20 @@
       if (window.renderTrips) window.renderTrips(trips);
     });
 
+    onSnapshot(query(collection(db, "gifts"), orderBy("createdAt", "desc")), (snapshot) => {
+      const gifts = [];
+      snapshot.forEach(doc => gifts.push(doc.data()));
+      if (window.renderGifts) window.renderGifts(gifts);
+    });
+
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('profile-section').style.display = 'block';
         document.getElementById('open-trip-modal-btn').style.display = 'flex';
         document.getElementById('trip-login-hint').style.display = 'none';
+        document.getElementById('open-gift-modal-btn').style.display = 'flex';
+        document.getElementById('gift-login-hint').style.display = 'none';
         document.getElementById('user-email').textContent = user.email;
         
         const docSnap = await getDoc(doc(db, "users", user.uid));
@@ -334,8 +412,6 @@
           document.getElementById('profile-avatar').value = data.avatar || "";
           document.getElementById('profile-birthday').value = data.birthday || "";
           document.getElementById('payment-methods-container').innerHTML = '';
-          document.getElementById('open-gift-modal-btn').style.display = 'flex';
-          document.getElementById('gift-login-hint').style.display = 'none';
           if (data.payments) data.payments.forEach(p => window.addPaymentRow(p.type, p.code || '', p.value));
         }
         window.loadBirthdays();
