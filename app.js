@@ -151,9 +151,7 @@ window.renderTrips = function(trips, currentUserId) {
     card.style.alignItems = 'flex-start';
     
     card.innerHTML = `
-      ${actionsHtml}
-      <div style="background: #eff6ff; color: #3b82f6; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px;">✈️ 即將啟程</div>
-      
+      ${actionsHtml}      
       <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 15px; padding-right: 50px; box-sizing: border-box;">
         <div class="avatar-circle">
           <span style="font-size: ${avatarSize};">${avatarText}</span>
@@ -204,15 +202,31 @@ window.renderGifts = function(gifts, currentUserId) {
       `;
     }
 
+    // 🏆 三重視角的認領邏輯
     let claimHtml = '';
     if (g.uid !== currentUserId) {
+         // 他人的願望
          if (g.claimedBy) {
-             claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center; border: 1px solid #bbf7d0;">🎁 你已認領準備此禮物！</div>`;
+             if (g.claimedBy === currentUserId) {
+                 // 是我自己認領的
+                 claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center; border: 1px solid #bbf7d0;">✅ 你已認領準備此禮物！</div>`;
+             } else {
+                 // 其他朋友認領的 (防止重複送禮)
+                 claimHtml = `<div style="background: #f8fafc; color: #94a3b8; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center;">🎁 已有其他朋友認領</div>`;
+             }
          } else {
+             // 沒人認領，顯示認領按鈕
              claimHtml = `<button onclick="claimGift('${g.id}')" style="margin-top: 12px; width: 100%; background: #333; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🙋‍♂️ 我來準備這個驚喜</button>`;
          }
     } else {
-         claimHtml = `<div style="color: #94a3b8; font-size: 13px; margin-top: 15px; text-align: center; font-style: italic;">⏳ 期待中... (系統會為你隱藏朋友的認領狀態)</div>`;
+         // 自己的願望 (壽星本人視角)
+         if (g.claimedBy) {
+             // 已有人認領，但隱藏是誰
+             claimHtml = `<div style="color: #f97316; font-size: 13px; margin-top: 15px; text-align: center; font-weight: bold;">🎉 神秘小精靈已認領準備中！敬請期待</div>`;
+         } else {
+             // 沒人認領
+             claimHtml = `<div style="color: #94a3b8; font-size: 13px; margin-top: 15px; text-align: center; font-style: italic;">⏳ 期待中...</div>`;
+         }
     }
 
     const avatarText = g.avatar || '😎';
