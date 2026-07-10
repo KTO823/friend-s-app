@@ -119,7 +119,8 @@
             <button id="add-payment-btn" class="secondary-btn" style="margin-top: 10px;">＋ 新增收款方式</button>
           </div>
           <button id="save-profile-btn" class="primary-btn" style="margin-top: 20px;">儲存設定</button>
-          <button id="logout-btn" class="secondary-btn" style="margin-top: 20px;">登出</button>
+          <button id="delete-account-btn" class="secondary-btn" style="margin-top: 20px; color: #ff6b6b; background-color: #fff0f0;">刪除帳號資料 (測試用)</button>
+          <button id="logout-btn" class="secondary-btn" style="margin-top: 10px;">登出</button>
         </div>
       </div>
     </main>
@@ -159,6 +160,19 @@
 
     document.getElementById('login-btn').addEventListener('click', () => signInWithPopup(auth, provider));
     document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+    document.getElementById('delete-account-btn').addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      if (!confirm("確定要刪除你的設定資料嗎？這會清除你的名稱與生日喔！")) return;
+      try {
+        await deleteDoc(doc(db, "users", user.uid));
+        alert("資料已清除，即將為您登出。");
+        await signOut(auth);
+      } catch (error) {
+        alert("刪除失敗：" + error.message);
+      }
+    });
 
     // --- 匯率切換與即時抓取邏輯 ---
     window.currentFetchedRate = 0;

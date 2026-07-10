@@ -54,9 +54,9 @@ window.renderBirthdaysFromData = function(users) {
         <div class="avatar-circle">
           <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
-        <div>
-          <p class="card-title" style="${isClosest ? 'font-weight: bold; color: #ff9f43;' : ''}">${displayName}</p>
-          <p class="card-subtitle">${u.birthday}</p>
+        <div style="text-align: left;">
+          <p class="card-title" style="${isClosest ? 'font-weight: bold; color: #ff9f43;' : ''} margin: 0 0 4px 0;">${displayName}</p>
+          <p class="card-subtitle" style="margin: 0;">${u.birthday}</p>
         </div>
       </div>
       <div class="countdown" style="color: ${daysColor}; font-weight: bold; font-size: ${isClosest ? '24px' : '20px'};">${daysText}</div>
@@ -67,7 +67,6 @@ window.renderBirthdaysFromData = function(users) {
   if (count === 0) list.innerHTML = '<p style="text-align: center; color: #999;">目前還沒有人設定生日喔！</p>';
 }
 
-// 渲染行程與代購清單 (加入目前登入者的 ID 判斷)
 window.renderTrips = function(trips, currentUserId) {
   const list = document.getElementById('trip-list');
   list.innerHTML = '';
@@ -93,10 +92,9 @@ window.renderTrips = function(trips, currentUserId) {
       if (ex.mode === 'publish') text = `發佈日匯率 (1 ${ex.currency} = ${ex.rate.toFixed(4)} TWD)`;
       else if (ex.mode === 'custom') text = `自訂匯率 (1 ${ex.currency} = ${ex.rate} TWD)`;
       else if (ex.mode === 'purchase') text = `依購買當天匯率結算 (${ex.currency})`;
-      exchangeHtml = `<div style="display: inline-block; background: #fff3e0; color: #d35400; padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; font-weight: bold; letter-spacing: 0.5px;">💱 結算設定：${text}</div>`;
+      exchangeHtml = `<div style="display: inline-block; background: #fff3e0; color: #d35400; padding: 6px 10px; border-radius: 4px; font-size: 13px; font-weight: bold;">💱 ${text}</div>`;
     }
 
-    // 如果是自己發佈的行程，顯示修改與刪除按鈕
     let actionsHtml = '';
     if (t.uid === currentUserId) {
       actionsHtml = `
@@ -114,31 +112,30 @@ window.renderTrips = function(trips, currentUserId) {
     
     card.innerHTML = `
       ${actionsHtml}
-      <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; width: 100%;">
+      <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 12px; padding-right: 50px; box-sizing: border-box;">
         <div class="avatar-circle">
           <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
-        <div style="flex: 1; padding-right: 60px;"> <p class="card-title">${t.name} 要去 <strong>${t.destination}</strong></p>
-          <p class="card-subtitle">日期：${t.date}</p>
+        <div style="text-align: left;">
+          <p class="card-title" style="margin: 0 0 4px 0;">${t.name} 要去 <strong>${t.destination}</strong></p>
+          <p class="card-subtitle" style="margin: 0;">日期：${t.date}</p>
         </div>
       </div>
       
-      ${exchangeHtml}
-      
-      <div style="background: #f9f9f9; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
-        <p style="margin: 0; font-size: 14px; color: #666;">備註：${t.note || '無特別備註'}</p>
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; text-align: left;">
+        ${exchangeHtml}
+        ${t.note ? `<div style="background: #f4f6f8; padding: 10px 12px; border-radius: 6px; font-size: 14px; color: #555; line-height: 1.5;">備註：${t.note}</div>` : ''}
       </div>
 
       <div style="display: flex; gap: 10px; width: 100%;">
-        <a href="${mapUrl}" target="_blank" class="secondary-btn" style="text-align: center; text-decoration: none; flex: 1; padding: 8px;">📍 附近地圖</a>
-        <button class="primary-btn" onclick="openProxyRequest('${t.destination}')" style="flex: 1; padding: 8px; background-color: #ff9f43;">📝 許願代購</button>
+        <a href="${mapUrl}" target="_blank" class="secondary-btn" style="text-align: center; text-decoration: none; flex: 1; padding: 10px 0; font-size: 14px; border-radius: 8px;">📍 附近地圖</a>
+        <button class="primary-btn" onclick="openProxyRequest('${t.destination}')" style="flex: 1; padding: 10px 0; background-color: #ff9f43; font-size: 14px; border-radius: 8px;">📝 許願代購</button>
       </div>
     `;
     list.appendChild(card);
   });
 }
 
-// 渲染禮物清單 (加入目前登入者的 ID 判斷)
 window.renderGifts = function(gifts, currentUserId) {
   const list = document.getElementById('gift-list');
   list.innerHTML = '';
@@ -147,7 +144,7 @@ window.renderGifts = function(gifts, currentUserId) {
     return;
   }
   gifts.forEach(g => {
-    const linkHtml = g.link ? `<a href="${g.link}" target="_blank" style="color: #ff9f43; text-decoration: none; font-size: 14px; display: block; margin-top: 5px;">🔗 參考連結</a>` : '';
+    const linkHtml = g.link ? `<a href="${g.link}" target="_blank" style="display: inline-block; margin-top: 4px; padding: 6px 12px; background-color: #fff3e0; color: #ff9f43; text-decoration: none; font-size: 13px; border-radius: 4px; font-weight: 500;">🔗 前往參考連結</a>` : '';
     const priceText = g.price ? `$${g.price}` : '未標價';
     
     let actionsHtml = '';
@@ -160,33 +157,41 @@ window.renderGifts = function(gifts, currentUserId) {
       `;
     }
 
+    const avatarText = g.avatar || '😎';
+    let avatarSize = '26px';
+    if (avatarText.length >= 8) avatarSize = '12px';
+    else if (avatarText.length >= 5) avatarSize = '16px'; 
+    else if (avatarText.length >= 3) avatarSize = '20px';
+
     const card = document.createElement('div');
     card.className = 'card';
     card.style.flexDirection = 'column';
     card.style.alignItems = 'flex-start';
     card.innerHTML = `
       ${actionsHtml}
-      <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px; width: 100%;">
-        <div class="avatar-circle" style="width: 40px; height: 40px; min-width: 40px;">
-          <span style="font-size: 20px;">${g.avatar || '😎'}</span>
+      <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 12px; padding-right: 50px; box-sizing: border-box;">
+        <div class="avatar-circle">
+          <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
-        <div style="flex: 1; padding-right: 60px;">
-          <p class="card-title">${g.name} 許願了</p>
-          <p class="card-subtitle" style="color: #333; font-weight: bold; font-size: 16px;">${g.itemName}</p>
+        <div style="text-align: left;">
+          <p class="card-title" style="margin: 0 0 4px 0;">${g.name} 許願了</p>
+          <p class="card-subtitle" style="margin: 0; color: #333; font-weight: bold; font-size: 16px;">${g.itemName}</p>
         </div>
-        <div style="font-weight: bold; color: #666;">${priceText}</div>
       </div>
-      ${g.note ? `<div style="background: #f9f9f9; padding: 8px 12px; border-radius: 6px; width: 100%; box-sizing: border-box; margin-bottom: 5px; font-size: 13px; color: #666;">備註：${g.note}</div>` : ''}
-      ${linkHtml}
+
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left;">
+        <div style="font-weight: 600; color: #ff6b6b; font-size: 15px;">預估價格：${priceText}</div>
+        ${g.note ? `<div style="background: #f4f6f8; padding: 10px 12px; border-radius: 6px; font-size: 14px; color: #555; line-height: 1.5;">備註：${g.note}</div>` : ''}
+        <div>${linkHtml}</div>
+      </div>
     `;
     list.appendChild(card);
   });
 }
 
-// 彈出視窗控制
 const tripModal = document.getElementById('trip-modal');
 document.getElementById('open-trip-modal-btn')?.addEventListener('click', () => {
-  window.editingTripId = null; // 新增模式
+  window.editingTripId = null;
   document.getElementById('add-trip-btn').textContent = "發佈行程並寄信通知";
   document.getElementById('trip-dest').value = '';
   document.getElementById('trip-date').value = '';
@@ -202,7 +207,7 @@ document.getElementById('close-trip-modal-btn')?.addEventListener('click', () =>
 
 const giftModal = document.getElementById('gift-modal');
 document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => {
-  window.editingGiftId = null; // 新增模式
+  window.editingGiftId = null;
   document.getElementById('add-gift-btn').textContent = "丟入許願池";
   document.getElementById('gift-modal-title').textContent = "新增許願商品";
   document.getElementById('gift-name').value = '';
