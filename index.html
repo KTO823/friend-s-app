@@ -21,7 +21,31 @@
         </div>
       </div>
 
-      <div id="gift-view" class="view" style="display: none;">🎁 禮物清單功能開發中...</div>
+      <div id="gift-view" class="view" style="display: none;">
+        <h2>🎁 許願池與禮物清單</h2>
+        <p id="gift-login-hint" style="text-align: center; color: #999;">請先登入才能查看或新增許願</p>
+
+        <div id="gift-list" class="card-list">
+          </div>
+
+        <button id="open-gift-modal-btn" class="fab-btn" style="display: none;">＋</button>
+      </div>
+
+      <div id="gift-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="gift-modal-title">新增許願商品</h3>
+            <button id="close-gift-modal-btn" class="close-modal-btn">✕</button>
+          </div>
+          <div class="input-section" style="margin-bottom: 0; border: none; padding: 0;">
+            <input type="text" id="gift-name" class="form-input" placeholder="商品名稱 (例：星街彗星 壓克力立牌)">
+            <input type="text" id="gift-link" class="form-input" placeholder="參考網址或圖片連結 (選填)">
+            <input type="number" id="gift-price" class="form-input" placeholder="大約價格 (選填)">
+            <input type="text" id="gift-note" class="form-input" placeholder="備註 (例：請幫我在秋葉原找找)">
+            <button id="add-gift-btn" class="primary-btn">丟入許願池</button>
+          </div>
+        </div>
+      </div>
       
       <div id="trip-view" class="view" style="display: none;">
         <h2>✈️ 行程與代購</h2>
@@ -184,6 +208,57 @@
       if (window.renderBirthdaysFromData) window.renderBirthdaysFromData(usersData);
     };
 
+    // 儲存禮物許願
+    document.getElementById('add-gift-btn')?.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      const itemName = document.getElementById('gift-name').value;
+      const itemLink = document.getElementById('gift-link').value;
+      const itemPrice = document.getElementById('gift-price').value;
+      const itemNote = document.getElementById('gift-note').value;
+
+      if (!itemName) return alert("至少要填寫商品名稱喔！");
+      
+      const btn = document.getElementById('add-gift-btn');
+      btn.textContent = "丟入中...";
+      btn.disabled = true;
+
+      try {
+        const myDoc = await getDoc(doc(db, "users", user.uid));
+        const myName = myDoc.exists() ? myDoc.data().name : "朋友";
+        const myAvatar = myDoc.exists() ? myDoc.data().avatar : "😎";
+
+        await addDoc(collection(db, "gifts"), {
+          uid: user.uid,
+          name: myName,
+          avatar: myAvatar,
+          itemName: itemName,
+          link: itemLink,
+          price: itemPrice,
+          note: itemNote,
+          createdAt: new Date()
+        });
+
+        alert("已成功丟入許願池！");
+        document.getElementById('gift-name').value = '';
+        document.getElementById('gift-link').value = '';
+        document.getElementById('gift-price').value = '';
+        document.getElementById('gift-note').value = '';
+        document.getElementById('gift-modal').classList.remove('active');
+      } catch (error) {
+        alert("新增失敗：" + error.message);
+      } finally {
+        btn.textContent = "丟入許願池";
+        btn.disabled = false;
+      }
+    });
+
+    // 即時監聽禮物清單
+    onSnapshot(query(collection(db, "gifts"), orderBy("createdAt", "desc")), (snapshot) => {
+      const gifts = [];
+      snapshot.forEach(doc => gifts.push(doc.data()));
+      if (window.renderGifts) window.renderGifts(gifts);
+    });
+
     document.getElementById('add-trip-btn').addEventListener('click', async () => {
       const user = auth.currentUser;
       const dest = document.getElementById('trip-dest').value;
@@ -259,6 +334,8 @@
           document.getElementById('profile-avatar').value = data.avatar || "";
           document.getElementById('profile-birthday').value = data.birthday || "";
           document.getElementById('payment-methods-container').innerHTML = '';
+          document.getElementById('open-gift-modal-btn').style.display = 'flex';
+          document.getElementById('gift-login-hint').style.display = 'none';
           if (data.payments) data.payments.forEach(p => window.addPaymentRow(p.type, p.code || '', p.value));
         }
         window.loadBirthdays();
@@ -267,6 +344,8 @@
         document.getElementById('profile-section').style.display = 'none';
         document.getElementById('open-trip-modal-btn').style.display = 'none';
         document.getElementById('trip-login-hint').style.display = 'block';
+        document.getElementById('open-gift-modal-btn').style.display = 'none';
+        document.getElementById('gift-login-hint').style.display = 'block';
       }
     });
   </script>

@@ -35,7 +35,7 @@ window.renderBirthdaysFromData = function(users) {
     if (!u.birthday) return;
     count++;
     const daysLeft = calculateDaysLeft(u.birthday);
-    let daysText = daysLeft === 0 ? "就是今天！" : `剩 ${daysLeft} 天`;
+    let daysText = daysLeft === 0 ? "就是今天！" : `居然只剩 ${daysLeft} 天`;
     
     // 判斷是否為第一名
     const isClosest = isFirst;
@@ -52,7 +52,7 @@ window.renderBirthdaysFromData = function(users) {
     else if (avatarText.length >= 3) avatarSize = '20px';
     
     // 如果是第一名，加上皇冠與專屬 Class
-    const displayName = isClosest ? `👑 ${u.name}` : u.name;
+    const displayName = isClosest ? `${u.name}` : u.name;
     const cardClass = isClosest ? 'card closest-birthday' : 'card';
 
     const card = document.createElement('div');
@@ -118,8 +118,65 @@ window.renderTrips = function(trips) {
 
       <div style="display: flex; gap: 10px; width: 100%;">
         <a href="${mapUrl}" target="_blank" class="secondary-btn" style="text-align: center; text-decoration: none; flex: 1; padding: 8px;">📍 附近地圖</a>
-        <button class="primary-btn" style="flex: 1; padding: 8px; background-color: #ff9f43;">📝 許願代購</button>
+        <button class="primary-btn" onclick="openProxyRequest('${t.destination}')" style="flex: 1; padding: 8px; background-color: #ff9f43;">📝 許願代購</button>      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// 控制許願池彈出視窗的開關
+const giftModal = document.getElementById('gift-modal');
+document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => {
+  document.getElementById('gift-modal-title').textContent = "新增許願商品";
+  document.getElementById('gift-note').value = ""; // 清空備註
+  giftModal.classList.add('active');
+});
+document.getElementById('close-gift-modal-btn')?.addEventListener('click', () => giftModal.classList.remove('active'));
+
+// 全域函數：從行程板點擊「許願代購」時觸發
+window.openProxyRequest = function(destination) {
+  switchTab('gift'); // 切換到禮物頁面
+  document.getElementById('gift-modal-title').textContent = `請託代購：${destination}`;
+  document.getElementById('gift-note').value = `代購地點：${destination}`; // 自動填寫備註
+  giftModal.classList.add('active');
+};
+
+// 渲染禮物清單
+window.renderGifts = function(gifts) {
+  const list = document.getElementById('gift-list');
+  list.innerHTML = '';
+
+  if (gifts.length === 0) {
+    list.innerHTML = '<p style="text-align: center; color: #999;">許願池空空的，快來新增吧！</p>';
+    return;
+  }
+
+  gifts.forEach(g => {
+    // 判斷有沒有附上連結
+    const linkHtml = g.link ? `<a href="${g.link}" target="_blank" style="color: #ff9f43; text-decoration: none; font-size: 14px; display: block; margin-top: 5px;">🔗 參考連結</a>` : '';
+    const priceText = g.price ? `$${g.price}` : '未標價';
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.flexDirection = 'column';
+    card.style.alignItems = 'flex-start';
+    
+    card.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px; width: 100%;">
+        <div class="avatar-circle" style="width: 40px; height: 40px; min-width: 40px;">
+          <span style="font-size: 20px;">${g.avatar || '😎'}</span>
+        </div>
+        <div style="flex: 1;">
+          <p class="card-title">${g.name} 許願了</p>
+          <p class="card-subtitle" style="color: #333; font-weight: bold; font-size: 16px;">${g.itemName}</p>
+        </div>
+        <div style="font-weight: bold; color: #666;">
+          ${priceText}
+        </div>
       </div>
+      
+      ${g.note ? `<div style="background: #f9f9f9; padding: 8px 12px; border-radius: 6px; width: 100%; box-sizing: border-box; margin-bottom: 5px; font-size: 13px; color: #666;">備註：${g.note}</div>` : ''}
+      ${linkHtml}
     `;
     list.appendChild(card);
   });
