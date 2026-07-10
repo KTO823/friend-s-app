@@ -75,7 +75,6 @@
     import { getFirestore, doc, setDoc, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    // 填入你專屬的 Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyCsG7ucrwAgoacvzMbxxeOV6-L9s_UxQLU",
       authDomain: "birthday-gifts-and-debt.firebaseapp.com",
@@ -91,13 +90,33 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // 登入與登出按鈕
+    // 登入登出
     document.getElementById('login-btn').addEventListener('click', () => {
       signInWithPopup(auth, provider).catch(error => alert("登入失敗：" + error.message));
     });
     document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-    // 儲存個人設定到 Firebase
+    // 動態新增收款方式
+    window.addPaymentRow = function(type = '銀行帳號', value = '') {
+      const container = document.getElementById('payment-methods-container');
+      const row = document.createElement('div');
+      row.className = 'payment-row';
+      row.innerHTML = `
+        <select class="pay-type">
+          <option value="銀行帳號" ${type === '銀行帳號' ? 'selected' : ''}>銀行帳號</option>
+          <option value="LINE Pay" ${type === 'LINE Pay' ? 'selected' : ''}>LINE Pay</option>
+          <option value="其他" ${type === '其他' ? 'selected' : ''}>其他</option>
+        </select>
+        <input type="text" class="pay-value" value="${value}" placeholder="填寫帳號或連結">
+        <button class="delete-btn" onclick="this.parentElement.remove()">刪除</button>
+      `;
+      container.appendChild(row);
+    };
+
+    // 綁定新增按鈕
+    document.getElementById('add-payment-btn').addEventListener('click', () => window.addPaymentRow());
+
+    // 儲存設定
     document.getElementById('save-profile-btn').addEventListener('click', async () => {
       const user = auth.currentUser;
       if (!user) return alert("請先登入！");
@@ -105,40 +124,56 @@
       const name = document.getElementById('profile-name').value;
       const avatar = document.getElementById('profile-avatar').value || "😎";
       const birthday = document.getElementById('profile-birthday').value;
-      const bank1 = document.getElementById('profile-bank1').value;
-      const bank2 = document.getElementById('profile-bank2').value;
-      const linepay = document.getElementById('profile-linepay').value;
 
-      if (!name || !birthday) return alert("名稱和生日一定要填喔！");
+      const paymentRows = document.querySelectorAll('.payment-row');
+      const payments = [];
+      paymentRows.forEach(row => {
+        const type = row.querySelector('.pay-type').value;
+        const value = row.querySelector('.pay-value').value;
+        if (value.trim() !== '') {
+          payments.push({ type: type, value: value });
+        }
+      });
+
+      if (!name || !birthday) {
+        alert("名稱和生日一定要填喔！");
+        return;
+      }
+
+      // 顯示儲存中狀態
+      const saveBtn = document.getElementById('save-profile-btn');
+      saveBtn.textContent = "儲存中...";
+      saveBtn.disabled = true;
 
       try {
         await setDoc(doc(db, "users", user.uid), {
           name: name,
           avatar: avatar,
           birthday: birthday,
-          bank1: bank1,
-          bank2: bank2,
-          linepay: linepay,
+          payments: payments,
           email: user.email
         });
-        alert("設定已成功儲存！");
-        window.loadBirthdays(); // 存檔後順便更新生日畫面
+        alert("設定已成功儲存！"); // 看到這個才代表真正存進去了！
+        if (window.loadBirthdays) window.loadBirthdays();
       } catch (error) {
         alert("儲存失敗：" + error.message);
+      } finally {
+        saveBtn.textContent = "儲存設定";
+        saveBtn.disabled = false;
       }
     });
 
-    // 從 Firebase 抓取所有人資料的函數
+    // 抓取生日資料
     window.loadBirthdays = async function() {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
         const usersData = [];
-        querySnapshot.forEach((doc) => {
-          usersData.push(doc.data());
-        });
-        window.renderBirthdaysFromData(usersData); // 呼叫 app.js 的渲染函數
+        querySnapshot.forEach((doc) => usersData.push(doc.data()));
+        if (window.renderBirthdaysFromData) {
+          window.renderBirthdaysFromData(usersData);
+        }
       } catch (error) {
-        console.error("載入生日失敗：", error);
+        console.error("載入失敗：", error);
       }
     };
 
@@ -149,26 +184,29 @@
         document.getElementById('profile-section').style.display = 'block';
         document.getElementById('user-email').textContent = user.email;
         
-        // 登入後，自動把之前存過的設定填回輸入框
-        const docSnap = await getDoc(doc(db, "users", user.uid));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          document.getElementById('profile-name').value = data.name || "";
-          document.getElementById('profile-avatar').value = data.avatar || "";
-          document.getElementById('profile-birthday').value = data.birthday || "";
-          document.getElementById('profile-bank1').value = data.bank1 || "";
-          document.getElementById('profile-bank2').value = data.bank2 || "";
-          document.getElementById('profile-linepay').value = data.linepay || "";
+        try {
+          const docSnap = await getDoc(doc(db, "users", user.uid));
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById('profile-name').value = data.name || "";
+            document.getElementById('profile-avatar').value = data.avatar || "";
+            document.getElementById('profile-birthday').value = data.birthday || "";
+            
+            document.getElementById('payment-methods-container').innerHTML = '';
+            if (data.payments && data.payments.length > 0) {
+              data.payments.forEach(p => window.addPaymentRow(p.type, p.value));
+            }
+          }
+        } catch (error) {
+          console.error("讀取個人資料失敗", error);
         }
-        
-        window.loadBirthdays(); // 登入後自動載入生日列表
+        window.loadBirthdays();
       } else {
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('profile-section').style.display = 'none';
       }
     });
   </script>
-
   <script src="app.js"></script>
 </body>
 </html>
