@@ -50,19 +50,13 @@
           </div>
 
           <div class="input-group">
-            <label>銀行帳號 1 (例如：台新 812-xxxx)：</label>
-            <input type="text" id="profile-bank1" placeholder="填寫銀行代碼與帳號">
-          </div>
-          <div class="input-group">
-            <label>銀行帳號 2 (例如：國泰 013-xxxx)：</label>
-            <input type="text" id="profile-bank2" placeholder="備用銀行帳號">
-          </div>
-          <div class="input-group">
-            <label>LINE Pay 轉帳連結：</label>
-            <input type="text" id="profile-linepay" placeholder="貼上你的轉帳連結">
+            <label>收款方式：</label>
+            <div id="payment-methods-container">
+              </div>
+            <button id="add-payment-btn" class="secondary-btn" style="margin-top: 10px;">＋ 新增收款方式</button>
           </div>
           
-          <button id="save-profile-btn" class="primary-btn">儲存設定</button>
+          <button id="save-profile-btn" class="primary-btn" style="margin-top: 20px;">儲存設定</button>
           <button id="logout-btn" class="secondary-btn" style="margin-top: 20px;">登出</button>
         </div>
       </div>
