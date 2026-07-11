@@ -257,18 +257,18 @@
 
     emailjs.init("bsabF8ne0dAqVxF-D"); 
     const EMAILJS_SERVICE_ID = "Birthday_gifts_and_debt";
-    const EMAILJS_TEMPLATE_ID = "template_nctmqgd";
 
-    // 統一寄送通知信的小工具，以後所有的通知都呼叫這個 function 就好
-    function sendNotifyEmail(toEmail, toName, subject, message) {
-      if (!toEmail || !EMAILJS_TEMPLATE_ID) return;
-      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        to_email: toEmail,
-        to_name: toName || '朋友',
-        subject: subject,
-        message: message
-      }).catch(err => console.error("寄信失敗", err));
+    // 三種通知信，各自對應一個 EmailJS 模板。行程發布沿用你原本那組，
+    // 另外兩組要去 EmailJS 建立新模板後，把 Template ID 貼在下面對應的位置。
+    const EMAILJS_TEMPLATE_TRIP  = "template_nctmqgd"; // 行程發布通知
+    const EMAILJS_TEMPLATE_PROXY = "template_3oima2n"; // 代購買到通知
+
+    // 統一寄送通知信的小工具：傳入要用哪個模板、以及要填進模板變數的資料
+    function sendNotifyEmail(templateId, params) {
+      if (!params.to_email || !templateId || templateId.includes("把「")) return;
+      emailjs.send(EMAILJS_SERVICE_ID, templateId, params).catch(err => console.error("寄信失敗", err));
     }
+
 
     const firebaseConfig = {
       apiKey: "AIzaSyCsG7ucrwAgoacvzMbxxeOV6-L9s_UxQLU",
@@ -428,7 +428,13 @@
           usersSnap.forEach(u => {
             const friendEmail = u.data().email;
             if (friendEmail && friendEmail !== user.email) {
-              sendNotifyEmail(friendEmail, u.data().name, `${myName} 發佈了新行程！`, `${myName} 要去 ${dest} 囉，記得去看看有沒有想代購的東西！`);
+              sendNotifyEmail(EMAILJS_TEMPLATE_TRIP, {
+                to_email: friendEmail,
+                to_name: u.data().name,
+                sender_name: myName,
+                destination: dest,
+                trip_date: date
+              });
             }
           });
           alert("行程已發佈！通知信已寄出。");
@@ -541,9 +547,6 @@
            await addDoc(collection(db, "debts"), {
               creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, isSettled: false, createdAt: new Date()
            });
-           const debtor = window.globalUsers?.find(u => u.id === debtorId);
-           sendNotifyEmail(debtor?.email, debtor?.name, `${myName} 幫你記了一筆帳`,
-             `項目：${itemName}，金額：NT$${splitAmount}，記得到「結算」頁面查看喔！`);
         }
         alert("記帳成功！");
         document.getElementById('debt-item').value = '';
@@ -664,8 +667,13 @@
           });
 
           const requester = window.globalUsers?.find(u => u.id === gift.uid);
-          sendNotifyEmail(requester?.email, requester?.name, "你許願的代購買到囉！",
-            `${buyerName} 幫你買到「${gift.itemName}」了，花費 NT$${actualPrice}，記得到「結算」頁面付款給對方喔！`);
+          sendNotifyEmail(EMAILJS_TEMPLATE_PROXY, {
+            to_email: requester?.email,
+            to_name: requester?.name,
+            sender_name: buyerName,
+            item_name: gift.itemName,
+            amount: actualPrice
+          });
         }
 
         window.pendingPurchaseGiftId = null;
