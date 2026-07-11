@@ -99,3 +99,16 @@ body.modal-open { overflow: hidden; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: 0.3s; }
 .dot.active { background: #3b82f6; width: 24px; }
 .close-tutorial-btn { position: absolute; top: 15px; right: 15px; font-size: 20px; background: none; border: none; color: #cbd5e1; cursor: pointer; z-index: 10; }
+
+/* 修復手機版年月欄位跑出去的問題 */
+input[type="date"], .form-input {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 隱藏原生多餘按鈕 */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+}
