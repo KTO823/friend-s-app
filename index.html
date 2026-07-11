@@ -137,6 +137,39 @@
           </div>
         </div>
       </div>
+
+      <div id="debt-view" class="view" style="display: none;">
+        <p id="debt-login-hint" style="text-align: center; color: #999; margin-top: 20px;">請先登入才能進行結算</p>
+        <div id="debt-content" style="display: none;">
+          <div class="balance-card">
+            <p class="balance-title">我的未收回代墊款</p>
+            <p class="balance-amount"><span class="balance-currency">NT$</span> <span id="my-credit-total">0</span></p>
+            <button id="secret-view-btn" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: #ddd; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">👀 偷偷看總結算</button>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 15px; color: #2c2c2c;">📜 待結算明細</h3>
+          </div>
+          <div id="debt-list" class="card-list"></div>
+          <button id="open-debt-modal-btn" class="fab-btn">＋</button>
+        </div>
+      </div>
+
+      <div id="debt-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>新增代墊款</h3>
+            <button id="close-debt-modal-btn" class="close-modal-btn">✕</button>
+          </div>
+          <div class="input-section">
+            <input type="text" id="debt-item" class="form-input" placeholder="項目 (例：環球影城門票)">
+            <input type="number" id="debt-amount" class="form-input" placeholder="總金額 (NT$)">
+            <label style="font-size: 13px; color: #777; margin-bottom: 8px; display: block; text-align: left;">誰需要給你錢？ (將自動平分)</label>
+            <div id="debtor-checkboxes" style="text-align: left; margin-bottom: 15px; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #e6e6e6;">
+              </div>
+            <button id="add-debt-btn" class="primary-btn">記上一筆</button>
+          </div>
+        </div>
+      </div>
       
       <div id="settings-view" class="view" style="display: none;">
         <div id="login-section" style="margin-top: 30px;">
@@ -169,10 +202,11 @@
     </main>
 
     <nav>
-      <button onclick="switchTab('birthday')">生日</button>
-      <button onclick="switchTab('gift')">禮物</button>
-      <button onclick="switchTab('trip')">行程代購</button>
-      <button onclick="switchTab('settings')">設定</button>
+      <button onclick="switchTab('birthday')" id="nav-birthday">生日</button>
+      <button onclick="switchTab('gift')" id="nav-gift">禮物</button>
+      <button onclick="switchTab('trip')" id="nav-trip">行程代購</button>
+      <button onclick="switchTab('debt')" id="nav-debt">結算</button>
+      <button onclick="switchTab('settings')" id="nav-settings">設定</button>
     </nav>
   </div>
 
@@ -410,11 +444,49 @@
       }
     });
 
-    window.globalTrips = [];
-    window.globalGifts = [];
-    window.editingTripId = null;
-    window.editingGiftId = null;
-    window.targetTripId = null;
+    // --- 結算中心儲存邏輯 ---
+    document.getElementById('add-debt-btn')?.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      const itemName = document.getElementById('debt-item').value;
+      const amount = parseFloat(document.getElementById('debt-amount').value);
+      const debtorCheckboxes = document.querySelectorAll('.debtor-cb:checked');
+      const debtorIds = Array.from(debtorCheckboxes).map(cb => cb.value);
+
+      if (!itemName || isNaN(amount) || debtorIds.length === 0) return alert("請填寫完整項目、金額，並至少選擇一位欠款人！");
+      
+      const btn = document.getElementById('add-debt-btn');
+      btn.textContent = "儲存中..."; btn.disabled = true;
+
+      try {
+        const myDoc = await getDoc(doc(db, "users", user.uid));
+        const myName = myDoc.exists() ? myDoc.data().name : "朋友";
+        const splitAmount = Math.ceil(amount / debtorIds.length);
+
+        for (const debtorId of debtorIds) {
+           await addDoc(collection(db, "debts"), {
+              creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, isSettled: false, createdAt: new Date()
+           });
+        }
+        alert("記帳成功！");
+        document.getElementById('debt-item').value = '';
+        document.getElementById('debt-amount').value = '';
+        document.getElementById('debt-modal').classList.remove('active');
+        document.body.classList.remove('modal-open');
+      } catch (error) {
+        alert("新增失敗：" + error.message);
+      } finally {
+        btn.textContent = "記上一筆"; btn.disabled = false;
+      }
+    });
+
+    window.globalTrips = []; window.globalGifts = []; window.globalDebts = []; window.globalUsers = [];
+    window.editingTripId = null; window.editingGiftId = null; window.targetTripId = null;
+    window.db = db; // 暴露給 app.js 使用
+
+    onSnapshot(collection(db, "users"), (snapshot) => {
+      window.globalUsers = [];
+      snapshot.forEach(doc => window.globalUsers.push({ id: doc.id, ...doc.data() }));
+    });
 
     onSnapshot(query(collection(db, "trips"), orderBy("createdAt", "desc")), (snapshot) => {
       window.globalTrips = [];
@@ -428,6 +500,17 @@
       if (window.renderGifts) window.renderGifts(window.globalGifts, auth.currentUser?.uid);
       if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
     });
+
+    onSnapshot(query(collection(db, "debts"), orderBy("createdAt", "desc")), (snapshot) => {
+      window.globalDebts = [];
+      snapshot.forEach(doc => window.globalDebts.push({ id: doc.id, ...doc.data() }));
+      if (window.renderDebts) window.renderDebts(window.globalDebts, auth.currentUser?.uid);
+    });
+
+    window.settleDebt = async function(debtId) {
+      if(!confirm("確定這筆款項已經結清了嗎？")) return;
+      try { await updateDoc(doc(db, "debts", debtId), { isSettled: true }); } catch(e) { alert("操作失敗：" + e.message); }
+    };
 
     window.deleteTrip = async function(id) {
       if(!confirm("確定要刪除這個行程嗎？")) return;
@@ -500,6 +583,12 @@
         document.getElementById('trip-login-hint').style.display = 'none';
         document.getElementById('open-gift-modal-btn').style.display = 'flex';
         document.getElementById('gift-login-hint').style.display = 'none';
+
+        const debtContent = document.getElementById('debt-content');
+        if (debtContent) debtContent.style.display = 'block';
+        const debtHint = document.getElementById('debt-login-hint');
+        if (debtHint) debtHint.style.display = 'none';
+
         document.getElementById('user-email').textContent = user.email;
         
         const docSnap = await getDoc(doc(db, "users", user.uid));
@@ -517,6 +606,12 @@
         document.getElementById('profile-section').style.display = 'none';
         document.getElementById('open-trip-modal-btn').style.display = 'none';
         document.getElementById('trip-login-hint').style.display = 'block';
+
+        const debtContent = document.getElementById('debt-content');
+        if (debtContent) debtContent.style.display = 'none';
+        const debtHint = document.getElementById('debt-login-hint');
+        if (debtHint) debtHint.style.display = 'block';
+
         document.getElementById('open-gift-modal-btn').style.display = 'none';
         document.getElementById('gift-login-hint').style.display = 'block';
       }
