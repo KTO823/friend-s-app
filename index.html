@@ -214,6 +214,21 @@
           <button id="logout-btn" class="secondary-btn" style="margin-top: 10px;">登出</button>
         </div>
       </div>
+      <div id="purchase-price-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>🛍️ 買到囉！花了多少錢？</h3>
+            <button id="close-purchase-price-modal-btn" class="close-modal-btn">✕</button>
+          </div>
+          <div class="input-section">
+            <p id="purchase-price-item-name" style="text-align: left; font-size: 14px; color: #666; margin: 0 0 12px 0;"></p>
+            <input type="number" id="purchase-price-input" class="form-input" placeholder="實際花費金額 (NT$)">
+            <p style="text-align: left; font-size: 12px; color: #999; margin: -6px 0 15px 0;">確認後會自動幫你在「結算」記一筆欠款給對方</p>
+            <button id="confirm-purchase-price-btn" class="primary-btn">確認買到了</button>
+          </div>
+        </div>
+      </div>
+
       <div id="bank-modal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
@@ -242,11 +257,11 @@
 
     emailjs.init("bsabF8ne0dAqVxF-D"); 
     const EMAILJS_SERVICE_ID = "Birthday_gifts_and_debt";
-    const EMAILJS_TEMPLATE_ID = "template_nctmqgd"; 
+    const EMAILJS_TEMPLATE_ID = "template_nctmqgd";
 
     // 統一寄送通知信的小工具，以後所有的通知都呼叫這個 function 就好
     function sendNotifyEmail(toEmail, toName, subject, message) {
-      if (!toEmail || !EMAILJS_TEMPLATE_ID || EMAILJS_TEMPLATE_ID.includes("把你在")) return;
+      if (!toEmail || !EMAILJS_TEMPLATE_ID) return;
       emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
         to_email: toEmail,
         to_name: toName || '朋友',
@@ -543,7 +558,7 @@
     });
 
     window.globalTrips = []; window.globalGifts = []; window.globalDebts = []; window.globalUsers = [];
-    window.editingTripId = null; window.editingGiftId = null; window.editingDebtId = null; window.targetTripId = null;
+    window.editingTripId = null; window.editingGiftId = null; window.editingDebtId = null; window.targetTripId = null; window.pendingPurchaseGiftId = null;
     window.db = db; // 暴露給 app.js 使用
     window.auth = auth;
     window.doc = doc;
@@ -599,14 +614,35 @@
     };
 
     // 買到代購商品：詢問實際花費金額，並自動記一筆欠款給喊單的人
-    window.purchaseProxy = async function(giftId) {
+    // 開啟「買到囉，花了多少錢？」的自訂視窗（取代原本醜醜的系統 prompt）
+    window.purchaseProxy = function(giftId) {
+      const gift = window.globalGifts.find(g => g.id === giftId);
+      if (!gift) return;
+      window.pendingPurchaseGiftId = giftId;
+      document.getElementById('purchase-price-item-name').textContent = `「${gift.itemName}」`;
+      document.getElementById('purchase-price-input').value = gift.price || '';
+      document.getElementById('purchase-price-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    };
+
+    document.getElementById('close-purchase-price-modal-btn')?.addEventListener('click', () => {
+      window.pendingPurchaseGiftId = null;
+      document.getElementById('purchase-price-modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
+
+    document.getElementById('confirm-purchase-price-btn')?.addEventListener('click', async () => {
+      const giftId = window.pendingPurchaseGiftId;
+      if (!giftId) return;
       const gift = window.globalGifts.find(g => g.id === giftId);
       if (!gift) return;
 
-      const input = prompt(`「${gift.itemName}」實際花了多少錢？（NT$，將自動幫你記一筆欠款給對方）`, gift.price || '');
-      if (input === null) return; // 使用者按取消，不做任何事
+      const input = document.getElementById('purchase-price-input').value;
       const actualPrice = parseFloat(input);
       if (isNaN(actualPrice) || actualPrice < 0) return alert("請輸入正確的金額喔！");
+
+      const btn = document.getElementById('confirm-purchase-price-btn');
+      btn.textContent = "處理中..."; btn.disabled = true;
 
       try {
         const buyer = auth.currentUser;
@@ -631,10 +667,18 @@
           sendNotifyEmail(requester?.email, requester?.name, "你許願的代購買到囉！",
             `${buyerName} 幫你買到「${gift.itemName}」了，花費 NT$${actualPrice}，記得到「結算」頁面付款給對方喔！`);
         }
+
+        window.pendingPurchaseGiftId = null;
+        document.getElementById('purchase-price-modal').classList.remove('active');
+        document.body.classList.remove('modal-open');
       } catch(e) {
         alert("標記失敗：" + e.message);
+      } finally {
+        btn.textContent = "確認買到了"; btn.disabled = false;
       }
-    };
+    });
+
+
 
     // 補上確認收到禮物的 Bug 修復
     window.confirmGiftReceived = async function(giftId) {
