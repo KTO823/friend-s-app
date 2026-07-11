@@ -1,3 +1,14 @@
+// 安全處理：把使用者輸入的文字轉成安全格式，避免有人打惡意程式碼進去搗亂
+function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // 新手導覽控制
 window.onload = function() {
   if (!localStorage.getItem('hasSeenTutorial')) {
@@ -85,7 +96,9 @@ window.renderBirthdaysFromData = function(users) {
     else if (avatarText.length >= 5) avatarSize = '16px'; 
     else if (avatarText.length >= 3) avatarSize = '20px';
     
-    const displayName = isClosest ? `👑 ${u.name}` : u.name;
+    const safeName = escapeHtml(u.name);
+    const safeAvatar = escapeHtml(avatarText);
+    const displayName = isClosest ? `👑 ${safeName}` : safeName;
     const cardClass = isClosest ? 'card closest-birthday' : 'card';
 
     const card = document.createElement('div');
@@ -93,11 +106,11 @@ window.renderBirthdaysFromData = function(users) {
     card.innerHTML = `
       <div style="display: flex; align-items: center; gap: 15px;">
         <div class="avatar-circle">
-          <span style="font-size: ${avatarSize};">${avatarText}</span>
+          <span style="font-size: ${avatarSize};">${safeAvatar}</span>
         </div>
         <div style="text-align: left;">
           <p class="card-title" style="${isClosest ? 'color: #f97316;' : ''}">${displayName}</p>
-          <p class="card-subtitle">${u.birthday}</p>
+          <p class="card-subtitle">${escapeHtml(u.birthday)}</p>
         </div>
       </div>
       <div class="countdown" style="color: ${daysColor}; font-weight: 700; font-size: ${isClosest ? '24px' : '20px'};">${daysText}</div>
@@ -168,13 +181,13 @@ window.renderTrips = function(trips, currentUserId) {
             else statusBtn = '<span style="color:#888; font-size:12px;">⏳ 尚未購買</span>';
         }
 
-        const proxyLink = p.link ? `<a href="${p.link}" target="_blank" style="color: #555; font-size: 12px; text-decoration: underline; margin-top: 4px; display: inline-block;">參考連結</a>` : '';
+        const proxyLink = p.link ? `<a href="${escapeHtml(p.link)}" target="_blank" style="color: #555; font-size: 12px; text-decoration: underline; margin-top: 4px; display: inline-block;">參考連結</a>` : '';
 
         proxyHtml += `
           <div style="display: flex; justify-content: space-between; align-items: center; background: #fafafa; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #f5f5f5;">
               <div style="font-size: 14px; flex: 1; padding-right: 10px;">
-                <span style="font-weight: 500; color: #333;">${p.name}：</span>${p.itemName}
-                ${p.price ? `<div style="color: #999; font-size: 12px; margin-top: 4px;">預估 NT$${p.price}</div>` : ''}
+                <span style="font-weight: 500; color: #333;">${escapeHtml(p.name)}：</span>${escapeHtml(p.itemName)}
+                ${p.price ? `<div style="color: #999; font-size: 12px; margin-top: 4px;">預估 NT$${escapeHtml(p.price)}</div>` : ''}
                 <div>${proxyLink}</div>
               </div>
               <div>${statusBtn}</div>
@@ -183,6 +196,8 @@ window.renderTrips = function(trips, currentUserId) {
       proxyHtml += `</div>`;
     }
 
+    const safeDest = escapeHtml(t.destination);
+
     const card = document.createElement('div');
     card.className = isPast ? 'card archived' : 'card';
     card.style.flexDirection = 'column';
@@ -190,20 +205,20 @@ window.renderTrips = function(trips, currentUserId) {
     card.innerHTML = `
       ${actionsHtml}
       <div style="display: flex; align-items: center; gap: 15px; width: 100%; margin-bottom: 12px; padding-right: 40px; box-sizing: border-box;">
-        <div class="avatar-circle"><span style="font-size: ${avatarSize};">${avatarText}</span></div>
+        <div class="avatar-circle"><span style="font-size: ${avatarSize};">${escapeHtml(avatarText)}</span></div>
         <div style="text-align: left;">
           <div style="font-size: 12px; color: #999; margin-bottom: 4px;">${isPast ? '已結束行程' : '計畫中行程'}</div>
-          <p class="card-title" style="font-size: 16px;">${t.name} 要去 <strong>${t.destination}</strong></p>
-          <p class="card-subtitle" style="font-size: 13px; color: #888;">日期：${t.date}</p>
+          <p class="card-title" style="font-size: 16px;">${escapeHtml(t.name)} 要去 <strong>${safeDest}</strong></p>
+          <p class="card-subtitle" style="font-size: 13px; color: #888;">日期：${escapeHtml(t.date)}</p>
         </div>
       </div>
       <div style="width: 100%; text-align: left; margin-bottom: 15px;">
         ${exchangeHtml}
-        ${t.note ? `<div style="background: #fafafa; padding: 12px; border-radius: 8px; font-size: 14px; color: #666; margin-top: 10px; border: 1px solid #f5f5f5;">備註：${t.note}</div>` : ''}
+        ${t.note ? `<div style="background: #fafafa; padding: 12px; border-radius: 8px; font-size: 14px; color: #666; margin-top: 10px; border: 1px solid #f5f5f5;">備註：${escapeHtml(t.note)}</div>` : ''}
       </div>
       <div style="display: flex; gap: 10px; width: 100%;">
         <a href="${mapUrl}" target="_blank" class="secondary-btn" style="text-align: center; text-decoration: none; flex: 1; padding: 12px 0; font-size: 14px;">📍 附近地圖</a>
-        <button class="primary-btn" onclick="openProxyRequest('${t.destination}', '${t.id}')" style="flex: 1; padding: 12px 0; font-size: 14px;">📝 許願代購</button>
+        <button class="primary-btn" data-dest="${safeDest}" data-trip-id="${t.id}" onclick="openProxyRequest(this.dataset.dest, this.dataset.tripId)" style="flex: 1; padding: 12px 0; font-size: 14px;">📝 許願代購</button>
       </div>
       ${proxyHtml}
     `;
@@ -228,7 +243,7 @@ window.renderGifts = function(gifts, currentUserId) {
 
   sortedGifts.forEach(g => {
     const isReceived = g.status === 'received';
-    const linkHtml = g.link ? `<a href="${g.link}" target="_blank" style="display: inline-block; margin-top: 4px; color: #555; text-decoration: underline; font-size: 13px;">參考連結</a>` : '';
+    const linkHtml = g.link ? `<a href="${escapeHtml(g.link)}" target="_blank" style="display: inline-block; margin-top: 4px; color: #555; text-decoration: underline; font-size: 13px;">參考連結</a>` : '';
     const priceText = g.price ? `NT$${g.price}` : '未標價';
     const tagHtml = g.type === 'birthday' ? `<div style="font-size: 12px; color: #888; margin-bottom: 6px;">🎂 ${g.birthdayYear} 生日願望</div>` : '';
 
@@ -269,15 +284,15 @@ window.renderGifts = function(gifts, currentUserId) {
       ${actionsHtml}
       ${tagHtml}
       <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 15px; padding-right: 40px; box-sizing: border-box;">
-        <div class="avatar-circle"><span style="font-size: ${avatarSize};">${avatarText}</span></div>
+        <div class="avatar-circle"><span style="font-size: ${avatarSize};">${escapeHtml(avatarText)}</span></div>
         <div style="text-align: left;">
-          <p class="card-title">${g.name}</p>
-          <p class="card-subtitle" style="color: #333; font-weight: 500; font-size: 15px;">${g.itemName}</p>
+          <p class="card-title">${escapeHtml(g.name)}</p>
+          <p class="card-subtitle" style="color: #333; font-weight: 500; font-size: 15px;">${escapeHtml(g.itemName)}</p>
         </div>
       </div>
       <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left;">
         <div style="font-weight: 500; color: #666; font-size: 14px;">預估價格：${priceText}</div>
-        ${g.note ? `<div style="background: #fafafa; padding: 12px; border-radius: 8px; font-size: 13px; color: #666; border: 1px solid #f5f5f5;">備註：${g.note}</div>` : ''}
+        ${g.note ? `<div style="background: #fafafa; padding: 12px; border-radius: 8px; font-size: 13px; color: #666; border: 1px solid #f5f5f5;">備註：${escapeHtml(g.note)}</div>` : ''}
         <div>${linkHtml}</div>
         ${claimHtml}
       </div>
@@ -351,15 +366,22 @@ window.showBankAccounts = function(userId) {
   }
   container.innerHTML = '';
   user.payments.forEach(p => {
+    const safeValue = escapeHtml(p.value);
     container.innerHTML += `
       <div style="background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
         <div style="text-align: left;">
-          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">${p.type}</div>
-          <div style="font-weight: 500; color: #333; font-size: 15px;">${p.code ? p.code + ' - ' : ''}${p.value}</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">${escapeHtml(p.type)}</div>
+          <div style="font-weight: 500; color: #333; font-size: 15px;">${p.code ? escapeHtml(p.code) + ' - ' : ''}${safeValue}</div>
         </div>
-        <button onclick="navigator.clipboard.writeText('${p.value}'); alert('已複製！');" style="background: #2c2c2c; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; cursor: pointer;">複製</button>
+        <button class="copy-pay-btn" data-value="${safeValue}" style="background: #2c2c2c; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; cursor: pointer;">複製</button>
       </div>
     `;
+  });
+  document.querySelectorAll('.copy-pay-btn').forEach(btn => {
+    btn.onclick = () => {
+      navigator.clipboard.writeText(btn.dataset.value);
+      alert('已複製！');
+    };
   });
   document.getElementById('bank-modal').classList.add('active');
 };
@@ -496,15 +518,22 @@ window.showBankAccounts = function(userId) {
   }
   container.innerHTML = '';
   user.payments.forEach(p => {
+    const safeValue = escapeHtml(p.value);
     container.innerHTML += `
       <div style="background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
         <div style="text-align: left;">
-          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">${p.type}</div>
-          <div style="font-weight: 500; color: #333; font-size: 15px;">${p.code ? p.code + ' - ' : ''}${p.value}</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">${escapeHtml(p.type)}</div>
+          <div style="font-weight: 500; color: #333; font-size: 15px;">${p.code ? escapeHtml(p.code) + ' - ' : ''}${safeValue}</div>
         </div>
-        <button onclick="navigator.clipboard.writeText('${p.value}'); alert('已複製！');" style="background: #2c2c2c; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; cursor: pointer;">複製</button>
+        <button class="copy-pay-btn" data-value="${safeValue}" style="background: #2c2c2c; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; cursor: pointer;">複製</button>
       </div>
     `;
+  });
+  document.querySelectorAll('.copy-pay-btn').forEach(btn => {
+    btn.onclick = () => {
+      navigator.clipboard.writeText(btn.dataset.value);
+      alert('已複製！');
+    };
   });
   document.getElementById('bank-modal').classList.add('active');
 };
