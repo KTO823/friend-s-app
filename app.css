@@ -110,3 +110,26 @@ body.modal-open { overflow: hidden; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: 0.3s; }
 .dot.active { background: #3b82f6; width: 24px; }
 .close-tutorial-btn { position: absolute; top: 15px; right: 15px; font-size: 20px; background: none; border: none; color: #cbd5e1; cursor: pointer; z-index: 10; }
+
+/* === 修復遺失的極簡風與結算中心樣式 (請貼在 app.css 最底下) === */
+/* 修復 iOS 日期欄位凸出去的 Bug */
+input[type="date"].form-input, input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #ffffff;
+}
+
+/* 柔和的標籤樣式 */
+.tag-soft {
+  background: #f5f5f5; color: #666; font-size: 12px; font-weight: 500;
+  padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 10px;
+}
+
+/* 結算頁面專屬黑卡 */
+.balance-card {
+  background: #2c2c2c; color: white; padding: 24px; border-radius: 12px;
+  text-align: left; margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.balance-title { font-size: 13px; color: #aaa; margin: 0 0 8px 0; }
+.balance-amount { font-size: 32px; font-weight: 600; margin: 0; display: flex; align-items: baseline; gap: 4px; }
+.balance-currency { font-size: 16px; font-weight: normal; color: #888; }
