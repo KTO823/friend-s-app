@@ -1,101 +1,100 @@
+/* 日系極簡基礎設定 */
 body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #faf9f6; 
+  margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+  background-color: #f7f7f5; /* 柔和的米白底色 */
+  color: #333333;
 }
 
 #app-container {
-  max-width: 500px;
-  margin: 0 auto;
-  background-color: #ffffff;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  max-width: 500px; margin: 0 auto;
+  background-color: #ffffff; min-height: 100vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.02);
 }
 
 header {
-  padding: 18px 20px;
-  border-bottom: 1px solid #f0f0f0;
-  text-align: center;
-  background-color: rgba(255, 255, 255, 0.95);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
+  padding: 20px; border-bottom: 1px solid #f0f0f0;
+  text-align: center; background-color: rgba(255, 255, 255, 0.95);
+  position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px);
 }
 
-header h1 { margin: 0; font-size: 18px; font-weight: 600; color: #333; letter-spacing: 1px; }
-main { flex: 1; padding: 15px 20px 90px 20px; }
-.view { font-size: 15px; line-height: 1.6; color: #666666; text-align: center; }
+header h1 { margin: 0; font-size: 17px; font-weight: 600; color: #2c2c2c; letter-spacing: 1px; }
+main { flex: 1; padding: 20px 20px 90px 20px; }
+.view { font-size: 15px; line-height: 1.6; color: #666; text-align: center; }
 
+/* 導覽列 (容納5個按鈕) */
 nav {
-  display: flex; border-top: 1px solid #f2f2f2;
+  display: flex; border-top: 1px solid #f0f0f0;
   background-color: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); 
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 500px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+  width: 100%; max-width: 500px; z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom); /* 適配 iPhone 底部黑條 */
 }
-nav button { flex: 1; padding: 18px 0; background: none; border: none; font-size: 14px; color: #999999; cursor: pointer; transition: color 0.2s; }
-nav button:hover { color: #333333; }
+nav button {
+  flex: 1; padding: 16px 0; background: none; border: none;
+  font-size: 13px; font-weight: 500; color: #a0a0a0; cursor: pointer; transition: color 0.2s;
+}
+nav button:hover, nav button.active { color: #2c2c2c; }
 
+/* 表單與輸入框修復 */
 .input-group { margin: 15px 0; text-align: left; }
-.input-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #666; }
-.input-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-.primary-btn { width: 100%; padding: 12px; background-color: #333; color: white; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; font-weight: bold;}
-.secondary-btn { width: 100%; padding: 12px; background-color: #f5f5f5; color: #666; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+.input-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #777; }
+.input-group input, .form-input { 
+  width: 100%; padding: 14px; margin-bottom: 12px;
+  border: 1px solid #e6e6e6; border-radius: 8px; box-sizing: border-box; 
+  font-size: 15px; color: #333; background-color: #fafafa;
+  appearance: none; -webkit-appearance: none; /* 解決 iOS 日期框預設灰色背景 */
+  font-family: inherit;
+}
+.input-group input:focus, .form-input:focus { outline: none; border-color: #ccc; background-color: #fff; }
 
+.primary-btn { width: 100%; padding: 14px; background-color: #2c2c2c; color: white; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; font-weight: 500; letter-spacing: 0.5px;}
+.secondary-btn { width: 100%; padding: 14px; background-color: #f2f2f2; color: #555; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; font-weight: 500;}
+
+/* 極簡卡片設計 */
 .card-list { display: flex; flex-direction: column; gap: 16px; margin-top: 10px; }
 .card {
-  background: #ffffff; padding: 20px; border-radius: 16px;
+  background: #ffffff; padding: 22px; border-radius: 12px;
   display: flex; justify-content: space-between; align-items: center;
-  border: 1px solid #f0f0f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04); position: relative;
-  transition: opacity 0.3s;
+  border: 1px solid #eaeaea; position: relative; transition: opacity 0.3s;
 }
-.card.archived { opacity: 0.5; background: #fbfbfb; }
+.card.archived { opacity: 0.4; background: #fafafa; border-color: #f0f0f0; }
 
 .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
-.icon-btn { background: rgba(240, 244, 248, 0.6); border: none; cursor: pointer; font-size: 14px; color: #666; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-.icon-btn:hover { background: #e2e8f0; transform: scale(1.1); }
-.card-title { font-size: 16px; color: #333333; margin: 0 0 4px 0; font-weight: 600;}
-.card-subtitle { font-size: 13px; color: #999999; margin: 0; }
-.countdown { font-size: 20px; color: #333; }
+.icon-btn { background: none; border: none; cursor: pointer; font-size: 14px; color: #999; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.icon-btn:hover { background: #f0f0f0; color: #333; }
+.card-title { font-size: 16px; color: #2c2c2c; margin: 0 0 4px 0; font-weight: 600;}
+.card-subtitle { font-size: 13px; color: #888; margin: 0; }
+.countdown { font-size: 20px; color: #2c2c2c; font-weight: 600; }
 
-.card.closest-birthday {
-  border: 1px solid #ffe8cc; background: linear-gradient(180deg, #fffdfa 0%, #ffffff 100%);
-  box-shadow: 0 8px 24px rgba(255, 159, 67, 0.12); margin-bottom: 20px;
+/* 柔和的標籤樣式 */
+.tag-soft {
+  background: #f5f5f5; color: #666; font-size: 12px; font-weight: 500;
+  padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 10px;
 }
+.tag-highlight { background: #fdf8ec; color: #8c6b32; } /* 柔和地暖色 */
+.tag-success { background: #eef7f2; color: #4a7c59; } /* 柔和地綠色 */
 
-.payment-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.payment-row select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; font-size: 14px; color: #333; }
-.payment-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; min-width: 0; }
-.delete-btn { background-color: #ff6b6b; color: white; border: none; border-radius: 8px; padding: 0 12px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.avatar-circle { width: 46px; height: 46px; min-width: 46px; border-radius: 50%; background-color: #f7f7f5; border: 1px solid #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
 
-.avatar-circle { width: 50px; height: 50px; min-width: 50px; border-radius: 50%; background-color: #f4f6f8; border: 1px solid #eef2f6; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
-
-.fab-btn { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; background-color: #333; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); border: none; cursor: pointer; z-index: 100; transition: transform 0.2s; }
+.fab-btn { position: fixed; bottom: 90px; right: 24px; width: 54px; height: 54px; background-color: #2c2c2c; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border: none; cursor: pointer; z-index: 100; transition: transform 0.2s; }
 .fab-btn:active { transform: scale(0.95); }
 
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
+/* 彈出視窗 */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
 .modal-overlay.active { opacity: 1; visibility: visible; }
-.modal-content { background-color: white; width: 90%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); transform: translateY(20px); transition: transform 0.3s; }
+.modal-content { background-color: white; width: 90%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1); transform: translateY(20px); transition: transform 0.3s; }
 .modal-overlay.active .modal-content { transform: translateY(0); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.modal-header h3 { margin: 0; font-size: 18px; color: #333; }
-.close-modal-btn { background: none; border: none; font-size: 24px; color: #999; cursor: pointer; }
+.modal-header h3 { margin: 0; font-size: 17px; color: #2c2c2c; }
+.close-modal-btn { background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer; }
 .input-section { background: #ffffff; padding: 0; border: none; margin-bottom: 0; }
-.form-input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-size: 15px; color: #333333; }
 
 body.modal-open { overflow: hidden; }
 
-/* 新手導覽樣式 */
-.tutorial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 3000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.3s; }
-.tutorial-overlay.active { opacity: 1; visibility: visible; }
-.tutorial-content { background: #fff; width: 90%; max-width: 350px; border-radius: 20px; overflow: hidden; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-.tutorial-slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
-.tutorial-slider::-webkit-scrollbar { display: none; }
-.tutorial-slide { flex: 0 0 100%; scroll-snap-align: start; padding: 40px 30px 60px 30px; box-sizing: border-box; text-align: center; }
-.tutorial-dots { position: absolute; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; gap: 8px; pointer-events: none;}
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: 0.3s; }
-.dot.active { background: #3b82f6; width: 24px; }
-.close-tutorial-btn { position: absolute; top: 15px; right: 15px; font-size: 20px; background: none; border: none; color: #cbd5e1; cursor: pointer; z-index: 10; }
+/* 結算頁面專屬 */
+.balance-card { background: #2c2c2c; color: white; padding: 24px; border-radius: 12px; text-align: left; margin-bottom: 20px; position: relative; overflow: hidden; }
+.balance-title { font-size: 13px; color: #aaa; margin: 0 0 8px 0; }
+.balance-amount { font-size: 32px; font-weight: 600; margin: 0; display: flex; align-items: baseline; gap: 4px; }
+.balance-currency { font-size: 16px; font-weight: normal; color: #888; }
