@@ -9,6 +9,18 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;');
 }
 
+// 產生「目前沒有資料」時的溫馨提示畫面
+function emptyStateHtml(icon, title, subtitle) {
+  return `
+    <div style="text-align: center; padding: 60px 20px; color: #bbb;">
+      <div style="font-size: 44px; margin-bottom: 12px;">${icon}</div>
+      <div style="font-size: 15px; color: #999; font-weight: 500; margin-bottom: 6px;">${title}</div>
+      <div style="font-size: 13px; color: #bbb;">${subtitle}</div>
+    </div>
+  `;
+}
+
+
 // 新手導覽控制
 window.onload = function() {
   if (!localStorage.getItem('hasSeenTutorial')) {
@@ -80,7 +92,13 @@ window.renderBirthdaysFromData = function(users) {
   const list = document.getElementById('birthday-list');
   list.innerHTML = '';
   users.sort((a, b) => calculateDaysLeft(a.birthday) - calculateDaysLeft(b.birthday));
-  
+
+  const withBirthday = users.filter(u => u.birthday);
+  if (withBirthday.length === 0) {
+    list.innerHTML = emptyStateHtml('🎂', '目前還沒有任何生日紀錄', '快去邀請朋友加入，或到「設定」填上自己的生日吧！');
+    return;
+  }
+
   let count = 0;
   let isFirst = true;
 
@@ -123,8 +141,6 @@ window.renderBirthdaysFromData = function(users) {
     `;
     list.appendChild(card);
   });
-
-  if (count === 0) list.innerHTML = '<p style="text-align: center; color: #999;">目前還沒有人設定生日喔！</p>';
 }
 
 // 這裡補回了遺失的 renderTrips 開頭，並去除了花俏的旅遊風標籤
@@ -133,7 +149,7 @@ window.renderTrips = function(trips, currentUserId) {
   list.innerHTML = '';
 
   if (trips.length === 0) {
-    list.innerHTML = '<p style="text-align: center; color: #999;">目前沒有人公佈行程喔！</p>';
+    list.innerHTML = emptyStateHtml('✈️', '目前還沒有任何行程', '按右下角的 + 按鈕，公佈你的下一趟旅行吧！');
     return;
   }
 
@@ -249,7 +265,7 @@ window.renderGifts = function(gifts, currentUserId) {
   const generalGifts = gifts.filter(g => g.type !== 'proxy');
 
   if (generalGifts.length === 0) {
-    list.innerHTML = '<p style="text-align: center; color: #999;">許願池空空的，快來新增吧！</p>';
+    list.innerHTML = emptyStateHtml('🎁', '許願池空空的', '按右下角的 + 按鈕，新增你的第一個願望吧！');
     return;
   }
   
@@ -417,69 +433,109 @@ window.renderDebts = function(debts, currentUserId) {
   const creditEl = document.getElementById('my-credit-total');
   if (creditEl) creditEl.textContent = totalCredit.toLocaleString();
 
-  // 列出與我相關的帳目
   const myRelatedDebts = debts.filter(d => d.creditorId === currentUserId || d.debtorId === currentUserId);
-  const activeDebts = myRelatedDebts.filter(d => !d.isSettled);
-  const settledDebts = myRelatedDebts.filter(d => d.isSettled);
-  const sortedDebts = [...activeDebts, ...settledDebts];
 
-  if (sortedDebts.length === 0) {
-    list.innerHTML = '<p style="text-align: center; color: #999;">目前沒有任何帳目紀錄。</p>';
+  if (myRelatedDebts.length === 0) {
+    list.innerHTML = emptyStateHtml('💰', '目前沒有任何帳目', '幫朋友代購，或按右下角 + 記一筆帳，就會顯示在這裡。');
     return;
   }
 
-  sortedDebts.forEach(d => {
-    const isSettled = d.isSettled;
+  // 依「對方是誰、誰欠誰」分組，同一個人的帳目會集中在同一個格子裡
+  const groups = {};
+  myRelatedDebts.forEach(d => {
     const isIOwe = d.debtorId === currentUserId;
-    const isMine = d.creditorId === currentUserId;
-
     const otherPersonId = isIOwe ? d.creditorId : d.debtorId;
+    const key = otherPersonId + '_' + (isIOwe ? 'owe' : 'owed');
+    if (!groups[key]) groups[key] = { otherPersonId, isIOwe, items: [] };
+    groups[key].items.push(d);
+  });
+
+  // 還有未結清帳目的分組排前面
+  const groupList = Object.values(groups).sort((a, b) => {
+    const aActive = a.items.some(d => !d.isSettled) ? 1 : 0;
+    const bActive = b.items.some(d => !d.isSettled) ? 1 : 0;
+    return bActive - aActive;
+  });
+
+  groupList.forEach(group => {
+    const { otherPersonId, isIOwe, items } = group;
     const otherUser = window.globalUsers?.find(u => u.id === otherPersonId);
-    const otherName = escapeHtml(otherUser ? otherUser.name : (isIOwe ? d.creditorName : '朋友'));
+    const otherName = escapeHtml(otherUser ? otherUser.name : (isIOwe ? items[0].creditorName : '朋友'));
+    const otherAvatar = escapeHtml(otherUser?.avatar || '😎');
 
-    let statusHtml = '';
-    if (isSettled) {
-       statusHtml = `<span style="font-size: 12px; color: #aaa;">已結清</span>`;
-    } else {
-       if (isIOwe) {
-           statusHtml = `<button style="background: #f5f5f5; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="showBankAccounts('${otherPersonId}')">💳 轉帳</button>`;
-       } else {
-           statusHtml = `<button style="background: #2c2c2c; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="settleDebt('${d.id}')">確認收款</button>`;
-       }
-    }
+    const activeItems = items.filter(d => !d.isSettled);
+    const settledItems = items.filter(d => d.isSettled);
+    const activeTotal = activeItems.reduce((sum, d) => sum + d.amount, 0);
 
-    // 只有記帳的人（債主本人）能修改／刪除，而且已結清的帳目就不給改了
-    let ownerActionsHtml = '';
-    if (isMine && !isSettled) {
-      ownerActionsHtml = `
-        <div style="display:flex; gap:6px; margin-top:8px;">
-          <button class="icon-btn" onclick="editDebt('${d.id}')" title="修改">✏️</button>
-          <button class="icon-btn" onclick="deleteDebt('${d.id}')" title="刪除">🗑️</button>
+    let itemsHtml = '';
+    activeItems.forEach(d => {
+      const isMine = d.creditorId === currentUserId;
+      const itemActionHtml = isIOwe
+        ? `<button style="background: #f5f5f5; border: 1px solid #ddd; color: #333; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); showBankAccounts('${otherPersonId}')">💳 轉帳</button>`
+        : `<button style="background: #2c2c2c; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); settleDebt('${d.id}')">確認收款</button>`;
+      const ownerActionsHtml = isMine ? `
+          <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); editDebt('${d.id}')" title="修改">✏️</button>
+          <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); deleteDebt('${d.id}')" title="刪除">🗑️</button>` : '';
+      itemsHtml += `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid #f2f2f2;">
+          <div style="text-align:left;">
+            <div style="font-size:14px; color:#333;">${escapeHtml(d.item)}</div>
+            <div style="font-size:15px; font-weight:600; color:${isIOwe ? '#d9534f' : '#333'};">NT$ ${d.amount}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            ${itemActionHtml}
+            ${ownerActionsHtml}
+          </div>
         </div>`;
-    }
+    });
+
+    const settledHtml = settledItems.map(d => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #f2f2f2; opacity:0.5;">
+          <div style="text-align:left; font-size:13px; color:#999;">${escapeHtml(d.item)} · NT$ ${d.amount}</div>
+          <span style="font-size:12px; color:#aaa;">已結清</span>
+        </div>`).join('');
+
+    const bulkBtnHtml = (!isIOwe && activeItems.length > 1)
+      ? `<button style="width:100%; margin-top:10px; background:#2c2c2c; color:white; border:none; padding:10px 0; border-radius:8px; font-size:13px; cursor:pointer;" onclick="event.stopPropagation(); settleAllForPerson('${otherPersonId}')">✅ ${otherName} 全部結清（共 NT$${activeTotal.toLocaleString()}）</button>`
+      : '';
 
     const card = document.createElement('div');
-    card.className = isSettled ? 'card archived' : 'card';
-    card.style.flexDirection = 'row';
-    card.style.alignItems = 'center';
+    card.className = activeItems.length === 0 ? 'card archived' : 'card';
+    card.style.flexDirection = 'column';
+    card.style.alignItems = 'stretch';
 
-    // 💡 點擊左邊整塊文字區，就會直接呼叫 showBankAccounts 跳出帳號視窗！
     card.innerHTML = `
-      <div style="flex: 1; text-align: left; cursor: pointer;" onclick="showBankAccounts('${otherPersonId}')" title="點擊查看對方帳號">
-        <div style="font-size: 12px; color: #888; margin-bottom: 4px;">
-          ${isIOwe ? `<span style="color:#d9534f; font-weight:500;">待付給</span> ${otherName}` : `${otherName} <span style="color:#4a7c59; font-weight:500;">應付款</span>`}
+      <div onclick="showBankAccounts('${otherPersonId}')" title="點擊查看對方帳號" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="avatar-circle" style="width:36px; height:36px; min-width:36px;"><span style="font-size:16px;">${otherAvatar}</span></div>
+          <div style="text-align:left;">
+            <div style="font-size:15px; font-weight:600; color:#333;">${otherName}</div>
+            <div style="font-size:12px; color:#999;">${isIOwe ? '待付給對方' : '對方應付款'}</div>
+          </div>
         </div>
-        <div style="font-size: 15px; font-weight: 500; color: #333;">${escapeHtml(d.item)}</div>
-        <div style="font-size: 18px; font-weight: 600; margin-top: 4px; color: ${isIOwe ? '#d9534f' : '#333'};">NT$ ${d.amount}</div>
+        ${activeItems.length > 0 ? `<div style="font-size:18px; font-weight:700; color:${isIOwe ? '#d9534f' : '#333'};">NT$ ${activeTotal.toLocaleString()}</div>` : `<span style="font-size:12px; color:#aaa;">已結清</span>`}
       </div>
-      <div style="text-align: right;">
-        ${statusHtml}
-        ${ownerActionsHtml}
-      </div>
+      ${itemsHtml}
+      ${settledHtml}
+      ${bulkBtnHtml}
     `;
     list.appendChild(card);
   });
 }
+
+// 一次把某個人所有未結清帳目標記為已結清
+window.settleAllForPerson = async function(personId) {
+  const user = window.auth?.currentUser;
+  if (!user) return;
+  const targets = (window.globalDebts || []).filter(d => d.creditorId === user.uid && d.debtorId === personId && !d.isSettled);
+  if (targets.length === 0) return;
+  if (!confirm(`確定要把這位朋友的 ${targets.length} 筆帳目都標記為已結清嗎？`)) return;
+  try {
+    await Promise.all(targets.map(d => window.updateDoc(window.doc(window.db, "debts", d.id), { isSettled: true })));
+  } catch (e) {
+    alert("操作失敗：" + e.message);
+  }
+};
 
 // 記帳修改 / 刪除
 window.editDebt = function(id) {

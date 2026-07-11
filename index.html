@@ -10,6 +10,15 @@
   <meta property="og:image" content="https://friend-s-app.vercel.app/assets/logo.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://friend-s-app.vercel.app/assets/logo.jpg">
+
+  <!-- 讓手機瀏覽器可以「加到主畫面」，開起來像真的 APP 一樣 -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2c2c2c">
+  <link rel="apple-touch-icon" href="/使用圖片/logo.jpg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="記得給money">
+
   <link rel="stylesheet" href="app.css">
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
@@ -235,6 +244,17 @@
     const EMAILJS_SERVICE_ID = "Birthday_gifts_and_debt";
     const EMAILJS_TEMPLATE_ID = "template_nctmqgd";
 
+    // 統一寄送通知信的小工具，以後所有的通知都呼叫這個 function 就好
+    function sendNotifyEmail(toEmail, toName, subject, message) {
+      if (!toEmail || !EMAILJS_TEMPLATE_ID || EMAILJS_TEMPLATE_ID.includes("把你在")) return;
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email: toEmail,
+        to_name: toName || '朋友',
+        subject: subject,
+        message: message
+      }).catch(err => console.error("寄信失敗", err));
+    }
+
     const firebaseConfig = {
       apiKey: "AIzaSyCsG7ucrwAgoacvzMbxxeOV6-L9s_UxQLU",
       authDomain: "birthday-gifts-and-debt.firebaseapp.com",
@@ -393,7 +413,7 @@
           usersSnap.forEach(u => {
             const friendEmail = u.data().email;
             if (friendEmail && friendEmail !== user.email) {
-              emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { sender_name: myName, destination: dest, to_email: friendEmail }).catch(err => console.error("寄信失敗", err));
+              sendNotifyEmail(friendEmail, u.data().name, `${myName} 發佈了新行程！`, `${myName} 要去 ${dest} 囉，記得去看看有沒有想代購的東西！`);
             }
           });
           alert("行程已發佈！通知信已寄出。");
@@ -506,6 +526,9 @@
            await addDoc(collection(db, "debts"), {
               creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, isSettled: false, createdAt: new Date()
            });
+           const debtor = window.globalUsers?.find(u => u.id === debtorId);
+           sendNotifyEmail(debtor?.email, debtor?.name, `${myName} 幫你記了一筆帳`,
+             `項目：${itemName}，金額：NT$${splitAmount}，記得到「結算」頁面查看喔！`);
         }
         alert("記帳成功！");
         document.getElementById('debt-item').value = '';
@@ -603,6 +626,11 @@
             createdAt: new Date(),
             sourceGiftId: giftId
           });
+
+          const requester = window.globalUsers?.find(u => u.id === gift.uid);
+          sendNotifyEmail(requester?.email, requester?.name, "你許願的代購買到囉！",
+            `${buyerName} 幫你買到「${gift.itemName}」了，花費 NT$${actualPrice}，記得到「結算」頁面付款給對方喔！`);
+        }
         }
       } catch(e) {
         alert("標記失敗：" + e.message);

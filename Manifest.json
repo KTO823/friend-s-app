@@ -1,0 +1,14 @@
+{
+  "name": "記得給money｜卡戳",
+  "short_name": "記得給money",
+  "description": "紀錄生日、代購、欠款的小工具",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf9f6",
+  "theme_color": "#2c2c2c",
+  "icons": [
+    { "src": "/使用圖片/logo.jpg", "sizes": "192x192", "type": "image/jpeg" },
+    { "src": "/使用圖片/logo.jpg", "sizes": "512x512", "type": "image/jpeg" }
+  ]
+}
