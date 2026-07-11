@@ -44,6 +44,12 @@ function switchTab(tabId) {
   // 只顯示被點擊的那個分頁
   document.getElementById(tabId + '-view').style.display = 'block';
 
+  // 更新最下方導覽列的選中樣式，讓使用者知道自己在哪一頁
+  const navButtons = document.querySelectorAll('nav button');
+  navButtons.forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById('nav-' + tabId);
+  if (activeBtn) activeBtn.classList.add('active');
+
   // 更新最上方的標題
   const headerTitle = document.getElementById('main-header-title');
   if (tabId === 'birthday') {

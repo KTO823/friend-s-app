@@ -36,8 +36,18 @@ nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 500px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
 }
-nav button { flex: 1; padding: 18px 0; background: none; border: none; font-size: 14px; color: #999999; cursor: pointer; transition: color 0.2s; }
+nav button { flex: 1; padding: 18px 0; background: none; border: none; font-size: 14px; color: #999999; cursor: pointer; transition: color 0.2s; position: relative; }
 nav button:hover { color: #333333; }
+nav button.active { color: #333333; font-weight: 600; }
+nav button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 8px; left: 50%;
+  transform: translateX(-50%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background-color: #ff9f43;
+}
 
 .input-group { margin: 15px 0; text-align: left; }
 .input-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #666; }
