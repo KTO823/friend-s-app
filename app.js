@@ -102,7 +102,22 @@ window.renderBirthdaysFromData = function(users) {
   if (count === 0) list.innerHTML = '<p style="text-align: center; color: #999;">目前還沒有人設定生日喔！</p>';
 }
 
-sortedTrips.forEach(t => {
+// 這裡補回了遺失的 renderTrips 開頭，並去除了花俏的旅遊風標籤
+window.renderTrips = function(trips, currentUserId) {
+  const list = document.getElementById('trip-list');
+  list.innerHTML = '';
+
+  if (trips.length === 0) {
+    list.innerHTML = '<p style="text-align: center; color: #999;">目前沒有人公佈行程喔！</p>';
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const activeTrips = trips.filter(t => t.date >= todayStr);
+  const pastTrips = trips.filter(t => t.date < todayStr);
+  const sortedTrips = [...activeTrips, ...pastTrips];
+
+  sortedTrips.forEach(t => {
     const isPast = t.date < todayStr;
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.destination)}`;
     const avatarText = t.avatar || '😎';
@@ -188,6 +203,7 @@ sortedTrips.forEach(t => {
     `;
     list.appendChild(card);
   });
+};
 
 window.renderGifts = function(gifts, currentUserId) {
   const list = document.getElementById('gift-list');
@@ -457,3 +473,32 @@ document.getElementById('secret-view-btn')?.addEventListener('click', () => {
   if(!hasDebt) report += "大家都互不相欠，太棒啦！";
   alert(report);
 });
+
+// --- 沒買到按鈕功能 ---
+window.failProxy = async function(giftId) {
+  if(!confirm("確定沒買到嗎？這會標記為殘念喔！")) return;
+  try { await updateDoc(doc(window.db, "gifts", giftId), { status: 'failed' }); } catch(e) { alert("標記失敗：" + e.message); }
+};
+
+// --- 顯示朋友的多個銀行帳號功能 ---
+window.showBankAccounts = function(userId) {
+  const user = window.globalUsers.find(u => u.id === userId);
+  const container = document.getElementById('bank-accounts-container');
+  if (!user || !user.payments || user.payments.length === 0) {
+    alert('對方尚未設定收款方式喔！');
+    return;
+  }
+  container.innerHTML = '';
+  user.payments.forEach(p => {
+    container.innerHTML += `
+      <div style="background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="text-align: left;">
+          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">${p.type}</div>
+          <div style="font-weight: 500; color: #333; font-size: 15px;">${p.code ? p.code + ' - ' : ''}${p.value}</div>
+        </div>
+        <button onclick="navigator.clipboard.writeText('${p.value}'); alert('已複製！');" style="background: #2c2c2c; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; cursor: pointer;">複製</button>
+      </div>
+    `;
+  });
+  document.getElementById('bank-modal').classList.add('active');
+};

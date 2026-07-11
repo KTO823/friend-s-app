@@ -199,6 +199,16 @@
           <button id="logout-btn" class="secondary-btn" style="margin-top: 10px;">登出</button>
         </div>
       </div>
+      <div id="bank-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>💳 選擇轉帳帳號</h3>
+            <button onclick="document.getElementById('bank-modal').classList.remove('active')" class="close-modal-btn">✕</button>
+          </div>
+          <div id="bank-accounts-container">
+            </div>
+        </div>
+      </div>
     </main>
 
     <nav>
