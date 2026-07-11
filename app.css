@@ -98,3 +98,15 @@ body.modal-open { overflow: hidden; }
 .balance-title { font-size: 13px; color: #aaa; margin: 0 0 8px 0; }
 .balance-amount { font-size: 32px; font-weight: 600; margin: 0; display: flex; align-items: baseline; gap: 4px; }
 .balance-currency { font-size: 16px; font-weight: normal; color: #888; }
+
+/* 新手導覽專屬樣式 */
+.tutorial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 3000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.3s; }
+.tutorial-overlay.active { opacity: 1; visibility: visible; }
+.tutorial-content { background: #fff; width: 90%; max-width: 350px; border-radius: 20px; overflow: hidden; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+.tutorial-slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+.tutorial-slider::-webkit-scrollbar { display: none; }
+.tutorial-slide { flex: 0 0 100%; scroll-snap-align: start; padding: 40px 30px 60px 30px; box-sizing: border-box; text-align: center; }
+.tutorial-dots { position: absolute; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; gap: 8px; pointer-events: none;}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: 0.3s; }
+.dot.active { background: #3b82f6; width: 24px; }
+.close-tutorial-btn { position: absolute; top: 15px; right: 15px; font-size: 20px; background: none; border: none; color: #cbd5e1; cursor: pointer; z-index: 10; }

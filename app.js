@@ -1,3 +1,26 @@
+// 新手導覽控制
+window.onload = function() {
+  if (!localStorage.getItem('hasSeenTutorial')) {
+    document.getElementById('tutorial-modal').classList.add('active');
+    document.body.classList.add('modal-open');
+  }
+};
+
+window.closeTutorial = function() {
+  document.getElementById('tutorial-modal').classList.remove('active');
+  document.body.classList.remove('modal-open');
+  localStorage.setItem('hasSeenTutorial', 'true');
+};
+
+window.updateTutorialDots = function() {
+  const slider = document.getElementById('tutorial-slider');
+  const dots = document.getElementById('tutorial-dots').children;
+  const index = Math.round(slider.scrollLeft / slider.offsetWidth);
+  for(let i=0; i<dots.length; i++) {
+    dots[i].className = i === index ? 'dot active' : 'dot';
+  }
+};
+
 function switchTab(tabId) {
   document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
   document.getElementById(tabId + '-view').style.display = 'block';
