@@ -6,7 +6,10 @@
   <title>記得給money｜卡戳</title>
   <meta property="og:title" content="記得給money｜卡戳">
   <meta property="og:description" content="一個紀錄生日、代購、欠款的網頁APP">
-  <meta name="twitter:card" content="./使用圖片/logo.jpg">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="./使用圖片/logo.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="./使用圖片/logo.jpg">
   <link rel="stylesheet" href="app.css">
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
@@ -462,12 +465,36 @@
       const user = auth.currentUser;
       const itemName = document.getElementById('debt-item').value;
       const amount = parseFloat(document.getElementById('debt-amount').value);
-      const debtorCheckboxes = document.querySelectorAll('.debtor-cb:checked');
-      const debtorIds = Array.from(debtorCheckboxes).map(cb => cb.value);
 
-      if (!itemName || isNaN(amount) || debtorIds.length === 0) return alert("請填寫完整項目、金額，並至少選擇一位欠款人！");
-      
+      if (!itemName || isNaN(amount)) return alert("請填寫完整項目與金額！");
+
       const btn = document.getElementById('add-debt-btn');
+
+      // 修改模式：只更新這一筆帳目的項目與金額
+      if (window.editingDebtId) {
+        btn.textContent = "儲存中..."; btn.disabled = true;
+        try {
+          await updateDoc(doc(db, "debts", window.editingDebtId), { item: itemName, amount: amount });
+          alert("修改成功！");
+          window.editingDebtId = null;
+          document.getElementById('debt-item').value = '';
+          document.getElementById('debt-amount').value = '';
+          document.getElementById('debt-modal').classList.remove('active');
+          document.body.classList.remove('modal-open');
+        } catch (error) {
+          alert("修改失敗：" + error.message);
+        } finally {
+          btn.textContent = "記上一筆"; btn.disabled = false;
+        }
+        return;
+      }
+
+      // 新增模式
+      const debtorCheckboxes = document.querySelectorAll('.debtor-cb:checked');
+      const debtorIds = Array.from(debtorCheckboxes).map(cb => cb.value).filter(id => id !== user.uid);
+
+      if (debtorIds.length === 0) return alert("請至少選擇一位欠款人！（不能欠自己錢喔）");
+
       btn.textContent = "儲存中..."; btn.disabled = true;
 
       try {
@@ -493,8 +520,16 @@
     });
 
     window.globalTrips = []; window.globalGifts = []; window.globalDebts = []; window.globalUsers = [];
-    window.editingTripId = null; window.editingGiftId = null; window.targetTripId = null;
+    window.editingTripId = null; window.editingGiftId = null; window.editingDebtId = null; window.targetTripId = null;
     window.db = db; // 暴露給 app.js 使用
+    window.auth = auth;
+    window.doc = doc;
+    window.updateDoc = updateDoc;
+    window.deleteDoc = deleteDoc;
+    window.addDoc = addDoc;
+    window.getDoc = getDoc;
+    window.getDocs = getDocs;
+    window.collection = collection;
 
     onSnapshot(collection(db, "users"), (snapshot) => {
       window.globalUsers = [];
@@ -575,8 +610,9 @@
       const gift = window.globalGifts.find(g => g.id === id);
       if(!gift) return;
       window.editingGiftId = id;
-      document.getElementById('gift-modal-title').textContent = "修改資料";
+      document.getElementById('gift-modal-title').textContent = gift.type === 'proxy' ? "修改代購委託" : "修改資料";
       document.getElementById('gift-type').value = gift.type || 'general';
+      document.getElementById('gift-type').disabled = gift.type === 'proxy';
       document.getElementById('gift-birthday-year').value = gift.birthdayYear || '';
       document.getElementById('birthday-year-container').style.display = gift.type === 'birthday' ? 'block' : 'none';
       document.getElementById('gift-name').value = gift.itemName;

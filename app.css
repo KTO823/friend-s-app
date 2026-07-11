@@ -66,6 +66,51 @@ nav button:hover { color: #333333; }
   box-shadow: 0 8px 24px rgba(255, 159, 67, 0.12); margin-bottom: 20px;
 }
 
+.balance-card {
+  position: relative;
+  background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+  border-radius: 20px;
+  padding: 28px 24px;
+  margin: 10px 0 24px 0;
+  color: #ffffff;
+  text-align: left;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.balance-card::after {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+}
+.balance-title {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.62);
+}
+.balance-amount {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.balance-amount .balance-currency {
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+}
+#my-credit-total {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
 .payment-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .payment-row select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; font-size: 14px; color: #333; }
 .payment-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; min-width: 0; }

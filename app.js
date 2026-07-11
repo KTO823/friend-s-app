@@ -183,14 +183,25 @@ window.renderTrips = function(trips, currentUserId) {
 
         const proxyLink = p.link ? `<a href="${escapeHtml(p.link)}" target="_blank" style="color: #555; font-size: 12px; text-decoration: underline; margin-top: 4px; display: inline-block;">參考連結</a>` : '';
 
+        // 喊單本人可以修改或取消委託（已買到之後就不能再改了）
+        let requesterActions = '';
+        if (p.uid === currentUserId && p.status !== 'purchased') {
+          requesterActions = `<div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="icon-btn" onclick="editGift('${p.id}')" title="修改">✏️</button>
+            <button class="icon-btn" onclick="deleteGift('${p.id}')" title="取消委託">🗑️</button>
+          </div>`;
+        }
+
         proxyHtml += `
           <div style="display: flex; justify-content: space-between; align-items: center; background: #fafafa; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #f5f5f5;">
               <div style="font-size: 14px; flex: 1; padding-right: 10px;">
                 <span style="font-weight: 500; color: #333;">${escapeHtml(p.name)}：</span>${escapeHtml(p.itemName)}
                 ${p.price ? `<div style="color: #999; font-size: 12px; margin-top: 4px;">預估 NT$${escapeHtml(p.price)}</div>` : ''}
                 <div>${proxyLink}</div>
+                ${requesterActions}
               </div>
               <div>${statusBtn}</div>
+
           </div>`;
       });
       proxyHtml += `</div>`;
@@ -353,7 +364,7 @@ window.openProxyRequest = function(destination, tripId) {
 // --- 沒買到按鈕功能 ---
 window.failProxy = async function(giftId) {
   if(!confirm("確定沒買到嗎？這會標記為殘念喔！")) return;
-  try { await updateDoc(doc(window.db, "gifts", giftId), { status: 'failed' }); } catch(e) { alert("標記失敗：" + e.message); }
+  try { await window.updateDoc(window.doc(window.db, "gifts", giftId), { status: 'failed' }); } catch(e) { alert("標記失敗：" + e.message); }
 };
 
 // --- 顯示朋友的多個銀行帳號功能 ---
@@ -414,10 +425,11 @@ window.renderDebts = function(debts, currentUserId) {
   sortedDebts.forEach(d => {
     const isSettled = d.isSettled;
     const isIOwe = d.debtorId === currentUserId;
+    const isMine = d.creditorId === currentUserId;
 
     const otherPersonId = isIOwe ? d.creditorId : d.debtorId;
     const otherUser = window.globalUsers?.find(u => u.id === otherPersonId);
-    const otherName = otherUser ? otherUser.name : (isIOwe ? d.creditorName : '朋友');
+    const otherName = escapeHtml(otherUser ? otherUser.name : (isIOwe ? d.creditorName : '朋友'));
 
     let statusHtml = '';
     if (isSettled) {
@@ -428,6 +440,16 @@ window.renderDebts = function(debts, currentUserId) {
        } else {
            statusHtml = `<button style="background: #2c2c2c; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="settleDebt('${d.id}')">確認收款</button>`;
        }
+    }
+
+    // 只有記帳的人（債主本人）能修改／刪除，而且已結清的帳目就不給改了
+    let ownerActionsHtml = '';
+    if (isMine && !isSettled) {
+      ownerActionsHtml = `
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button class="icon-btn" onclick="editDebt('${d.id}')" title="修改">✏️</button>
+          <button class="icon-btn" onclick="deleteDebt('${d.id}')" title="刪除">🗑️</button>
+        </div>`;
     }
 
     const card = document.createElement('div');
@@ -441,18 +463,46 @@ window.renderDebts = function(debts, currentUserId) {
         <div style="font-size: 12px; color: #888; margin-bottom: 4px;">
           ${isIOwe ? `<span style="color:#d9534f; font-weight:500;">待付給</span> ${otherName}` : `${otherName} <span style="color:#4a7c59; font-weight:500;">應付款</span>`}
         </div>
-        <div style="font-size: 15px; font-weight: 500; color: #333;">${d.item}</div>
+        <div style="font-size: 15px; font-weight: 500; color: #333;">${escapeHtml(d.item)}</div>
         <div style="font-size: 18px; font-weight: 600; margin-top: 4px; color: ${isIOwe ? '#d9534f' : '#333'};">NT$ ${d.amount}</div>
       </div>
-      <div>${statusHtml}</div>
+      <div style="text-align: right;">
+        ${statusHtml}
+        ${ownerActionsHtml}
+      </div>
     `;
     list.appendChild(card);
   });
 }
 
+// 記帳修改 / 刪除
+window.editDebt = function(id) {
+  const debt = window.globalDebts.find(d => d.id === id);
+  if (!debt) return;
+  window.editingDebtId = id;
+  document.getElementById('debt-item').value = debt.item;
+  document.getElementById('debt-amount').value = debt.amount;
+  const cbContainer = document.getElementById('debtor-checkboxes');
+  cbContainer.innerHTML = '<p style="font-size:13px; color:#999; margin:0;">修改模式僅能調整項目名稱與金額。若要更換欠款對象，請刪除後重新新增一筆。</p>';
+  document.getElementById('add-debt-btn').textContent = "儲存修改";
+  document.getElementById('debt-modal').classList.add('active');
+  document.body.classList.add('modal-open');
+};
+
+window.deleteDebt = async function(id) {
+  if (!confirm("確定要刪除這筆帳目嗎？")) return;
+  try {
+    await window.deleteDoc(window.doc(window.db, "debts", id));
+  } catch (e) {
+    alert("刪除失敗：" + e.message);
+  }
+};
+
 // 結算彈出視窗控制
 const debtModal = document.getElementById('debt-modal');
 document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => {
+  window.editingDebtId = null;
+  document.getElementById('add-debt-btn').textContent = "記上一筆";
   document.getElementById('debt-item').value = '';
   document.getElementById('debt-amount').value = '';
 
@@ -465,7 +515,7 @@ document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => 
     cbContainer.innerHTML += `
       <label style="display: block; margin-bottom: 8px; font-size: 15px; cursor: pointer;">
         <input type="checkbox" class="debtor-cb" value="${f.id}" style="margin-right: 8px; transform: scale(1.2);">
-        ${f.avatar || '😎'} ${f.name}
+        ${escapeHtml(f.avatar || '😎')} ${escapeHtml(f.name)}
       </label>
     `;
   });
@@ -475,6 +525,7 @@ document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => 
 });
 
 document.getElementById('close-debt-modal-btn')?.addEventListener('click', () => {
+  window.editingDebtId = null;
   debtModal.classList.remove('active');
   document.body.classList.remove('modal-open');
 });
@@ -501,39 +552,3 @@ document.getElementById('secret-view-btn')?.addEventListener('click', () => {
   if(!hasDebt) report += "大家都互不相欠，太棒啦！";
   alert(report);
 });
-
-// --- 沒買到按鈕功能 ---
-window.failProxy = async function(giftId) {
-  if(!confirm("確定沒買到嗎？這會標記為殘念喔！")) return;
-  try { await updateDoc(doc(window.db, "gifts", giftId), { status: 'failed' }); } catch(e) { alert("標記失敗：" + e.message); }
-};
-
-// --- 顯示朋友的多個銀行帳號功能 ---
-window.showBankAccounts = function(userId) {
-  const user = window.globalUsers.find(u => u.id === userId);
-  const container = document.getElementById('bank-accounts-container');
-  if (!user || !user.payments || user.payments.length === 0) {
-    alert('對方尚未設定收款方式喔！');
-    return;
-  }
-  container.innerHTML = '';
-  user.payments.forEach(p => {
-    const safeValue = escapeHtml(p.value);
-    container.innerHTML += `
-      <div style="background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-        <div style="text-align: left;">
-          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">${escapeHtml(p.type)}</div>
-          <div style="font-weight: 500; color: #333; font-size: 15px;">${p.code ? escapeHtml(p.code) + ' - ' : ''}${safeValue}</div>
-        </div>
-        <button class="copy-pay-btn" data-value="${safeValue}" style="background: #2c2c2c; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; cursor: pointer;">複製</button>
-      </div>
-    `;
-  });
-  document.querySelectorAll('.copy-pay-btn').forEach(btn => {
-    btn.onclick = () => {
-      navigator.clipboard.writeText(btn.dataset.value);
-      alert('已複製！');
-    };
-  });
-  document.getElementById('bank-modal').classList.add('active');
-};
