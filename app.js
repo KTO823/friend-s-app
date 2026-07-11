@@ -21,15 +21,19 @@ window.updateTutorialDots = function() {
   }
 };
 
-// 動態更新 Header 標題
+// 動態更新 Header 標題與切換分頁
 function switchTab(tabId) {
+  // 切換前，先把所有分頁都隱藏
   document.getElementById('birthday-view').style.display = 'none';
   document.getElementById('gift-view').style.display = 'none';
   document.getElementById('trip-view').style.display = 'none';
+  document.getElementById('debt-view').style.display = 'none'; // 👈 就是補上這一行，讓結算畫面乖乖隱藏！
   document.getElementById('settings-view').style.display = 'none';
 
+  // 只顯示被點擊的那個分頁
   document.getElementById(tabId + '-view').style.display = 'block';
 
+  // 更新最上方的標題
   const headerTitle = document.getElementById('main-header-title');
   if (tabId === 'birthday') {
     headerTitle.innerHTML = '🎂 生日倒數';
@@ -38,6 +42,8 @@ function switchTab(tabId) {
     headerTitle.innerHTML = '🎁 許願池與禮物';
   } else if (tabId === 'trip') {
     headerTitle.innerHTML = '✈️ 行程與代購';
+  } else if (tabId === 'debt') {
+    headerTitle.innerHTML = '💰 結算中心';
   } else if (tabId === 'settings') {
     headerTitle.innerHTML = '⚙️ 個人設定';
   }
