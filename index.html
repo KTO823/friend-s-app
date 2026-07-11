@@ -7,9 +7,9 @@
   <meta property="og:title" content="記得給money｜卡戳">
   <meta property="og:description" content="一個紀錄生日、代購、欠款的網頁APP">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://friend-s-app.vercel.app/assets/logo.jpg">
+  <meta property="og:image" content="https://friend-s-app.vercel.app/使用圖片/logo.jpg">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://friend-s-app.vercel.app/assets/logo.jpg">
+  <meta name="twitter:image" content="https://friend-s-app.vercel.app/使用圖片/logo.jpg">
 
   <!-- 讓手機瀏覽器可以「加到主畫面」，開起來像真的 APP 一樣 -->
   <link rel="manifest" href="/manifest.json">
@@ -242,7 +242,7 @@
 
     emailjs.init("bsabF8ne0dAqVxF-D"); 
     const EMAILJS_SERVICE_ID = "Birthday_gifts_and_debt";
-    const EMAILJS_TEMPLATE_ID = "template_nctmqgd";
+    const EMAILJS_TEMPLATE_ID = "template_nctmqgd"; 
 
     // 統一寄送通知信的小工具，以後所有的通知都呼叫這個 function 就好
     function sendNotifyEmail(toEmail, toName, subject, message) {
@@ -630,7 +630,6 @@
           const requester = window.globalUsers?.find(u => u.id === gift.uid);
           sendNotifyEmail(requester?.email, requester?.name, "你許願的代購買到囉！",
             `${buyerName} 幫你買到「${gift.itemName}」了，花費 NT$${actualPrice}，記得到「結算」頁面付款給對方喔！`);
-        }
         }
       } catch(e) {
         alert("標記失敗：" + e.message);
