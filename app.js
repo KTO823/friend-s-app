@@ -168,7 +168,7 @@ window.renderTrips = function(trips, currentUserId) {
         const isPublisher = (t.uid === currentUserId);
         let statusBtn = '';
         if (isPublisher) {
-            if (p.status === 'purchased') statusBtn = `<span style="color: #4a7c59; font-size: 12px; font-weight: 500;">✅ 已買到</span>`;
+            if (p.status === 'purchased') statusBtn = `<span style="color: #4a7c59; font-size: 12px; font-weight: 500;">✅ 已買到${p.actualPrice ? ` (NT$${escapeHtml(p.actualPrice)})` : ''}</span>`;
             else if (p.status === 'failed') statusBtn = `<span style="color: #999; font-size: 12px; font-weight: 500;">❌ 沒買到</span>`;
             else statusBtn = `
               <div style="display:flex; gap:6px;">
@@ -176,7 +176,7 @@ window.renderTrips = function(trips, currentUserId) {
                 <button onclick="failProxy('${p.id}')" style="background: #f2f2f2; color: #666; border: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">沒買</button>
               </div>`;
         } else {
-            if (p.status === 'purchased') statusBtn = '<span style="color:#4a7c59; font-size:12px;">✅ 朋友已買到</span>';
+            if (p.status === 'purchased') statusBtn = `<span style="color:#4a7c59; font-size:12px;">✅ 朋友已買到${p.actualPrice ? ` (NT$${escapeHtml(p.actualPrice)})` : ''}</span>`;
             else if (p.status === 'failed') statusBtn = '<span style="color:#999; font-size:12px;">❌ 殘念沒買到</span>';
             else statusBtn = '<span style="color:#888; font-size:12px;">⏳ 尚未購買</span>';
         }

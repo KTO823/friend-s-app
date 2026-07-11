@@ -233,7 +233,7 @@
 
     emailjs.init("bsabF8ne0dAqVxF-D"); 
     const EMAILJS_SERVICE_ID = "Birthday_gifts_and_debt";
-    const EMAILJS_TEMPLATE_ID = "";
+    const EMAILJS_TEMPLATE_ID = "template_nctmqgd";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCsG7ucrwAgoacvzMbxxeOV6-L9s_UxQLU",
@@ -575,8 +575,38 @@
       try { await updateDoc(doc(db, "gifts", giftId), { claimedBy: auth.currentUser.uid }); } catch(e) { alert("認領失敗：" + e.message); }
     };
 
+    // 買到代購商品：詢問實際花費金額，並自動記一筆欠款給喊單的人
     window.purchaseProxy = async function(giftId) {
-      try { await updateDoc(doc(db, "gifts", giftId), { status: 'purchased' }); } catch(e) { alert("標記失敗：" + e.message); }
+      const gift = window.globalGifts.find(g => g.id === giftId);
+      if (!gift) return;
+
+      const input = prompt(`「${gift.itemName}」實際花了多少錢？（NT$，將自動幫你記一筆欠款給對方）`, gift.price || '');
+      if (input === null) return; // 使用者按取消，不做任何事
+      const actualPrice = parseFloat(input);
+      if (isNaN(actualPrice) || actualPrice < 0) return alert("請輸入正確的金額喔！");
+
+      try {
+        const buyer = auth.currentUser;
+        await updateDoc(doc(db, "gifts", giftId), { status: 'purchased', actualPrice: actualPrice });
+
+        // 如果喊單的人不是自己（正常情況都不是自己），就自動產生一筆欠款
+        if (gift.uid && gift.uid !== buyer.uid && actualPrice > 0) {
+          const buyerDoc = await getDoc(doc(db, "users", buyer.uid));
+          const buyerName = buyerDoc.exists() ? buyerDoc.data().name : "朋友";
+          await addDoc(collection(db, "debts"), {
+            creditorId: buyer.uid,
+            creditorName: buyerName,
+            debtorId: gift.uid,
+            amount: actualPrice,
+            item: `代購：${gift.itemName}`,
+            isSettled: false,
+            createdAt: new Date(),
+            sourceGiftId: giftId
+          });
+        }
+      } catch(e) {
+        alert("標記失敗：" + e.message);
+      }
     };
 
     // 補上確認收到禮物的 Bug 修復
