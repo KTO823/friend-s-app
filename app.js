@@ -21,14 +21,12 @@ window.updateTutorialDots = function() {
   }
 };
 
-// 找到原本的 switchTab，替換成這段：
+// 動態更新 Header 標題
 function switchTab(tabId) {
   document.getElementById('birthday-view').style.display = 'none';
   document.getElementById('gift-view').style.display = 'none';
   document.getElementById('trip-view').style.display = 'none';
   document.getElementById('settings-view').style.display = 'none';
-  const debtView = document.getElementById('debt-view');
-  if(debtView) debtView.style.display = 'none';
 
   document.getElementById(tabId + '-view').style.display = 'block';
 
@@ -40,236 +38,327 @@ function switchTab(tabId) {
     headerTitle.innerHTML = '🎁 許願池與禮物';
   } else if (tabId === 'trip') {
     headerTitle.innerHTML = '✈️ 行程與代購';
-  } else if (tabId === 'debt') {
-    headerTitle.innerHTML = '💰 結算中心';
   } else if (tabId === 'settings') {
     headerTitle.innerHTML = '⚙️ 個人設定';
   }
 }
 
-// === 💸 結算中心渲染邏輯 ===
-window.renderDebts = function(debts, currentUserId) {
-  const list = document.getElementById('debt-list');
+function calculateDaysLeft(dateString) {
+  if (!dateString) return 999;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const bday = new Date(dateString);
+  let nextBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+  if (today > nextBday) nextBday.setFullYear(today.getFullYear() + 1);
+  return Math.ceil(Math.abs(nextBday - today) / (1000 * 60 * 60 * 24)); 
+}
+
+window.renderBirthdaysFromData = function(users) {
+  const list = document.getElementById('birthday-list');
   list.innerHTML = '';
+  users.sort((a, b) => calculateDaysLeft(a.birthday) - calculateDaysLeft(b.birthday));
   
-  if (!currentUserId) return;
+  let count = 0;
+  let isFirst = true;
 
-  // 計算我墊付的總額 (未結清的)
-  const myCredits = debts.filter(d => d.creditorId === currentUserId && !d.isSettled);
-  const totalCredit = myCredits.reduce((sum, d) => sum + d.amount, 0);
-  document.getElementById('my-credit-total').textContent = totalCredit.toLocaleString();
+  users.forEach(u => {
+    if (!u.birthday) return;
+    count++;
+    const daysLeft = calculateDaysLeft(u.birthday);
+    let daysText = daysLeft === 0 ? "就是今天！" : `剩 ${daysLeft} 天`;
+    
+    const isClosest = isFirst;
+    isFirst = false;
 
-  // 列出與我相關的帳目 (我欠人的，或別人欠我的)
-  const myRelatedDebts = debts.filter(d => d.creditorId === currentUserId || d.debtorId === currentUserId);
-  const activeDebts = myRelatedDebts.filter(d => !d.isSettled);
-  const settledDebts = myRelatedDebts.filter(d => d.isSettled);
-  const sortedDebts = [...activeDebts, ...settledDebts]; // 已結清的沉底
+    let daysColor = daysLeft <= 7 ? "#ef4444" : "#333";
+    if (isClosest) daysColor = "#f97316";
+    
+    const avatarText = u.avatar || '😎';
+    let avatarSize = '26px';
+    if (avatarText.length >= 8) avatarSize = '12px';
+    else if (avatarText.length >= 5) avatarSize = '16px'; 
+    else if (avatarText.length >= 3) avatarSize = '20px';
+    
+    const displayName = isClosest ? `👑 ${u.name}` : u.name;
+    const cardClass = isClosest ? 'card closest-birthday' : 'card';
 
-  if (sortedDebts.length === 0) {
-    list.innerHTML = '<p style="text-align: center; color: #999;">目前沒有任何帳目紀錄。</p>';
+    const card = document.createElement('div');
+    card.className = cardClass;
+    card.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <div class="avatar-circle">
+          <span style="font-size: ${avatarSize};">${avatarText}</span>
+        </div>
+        <div style="text-align: left;">
+          <p class="card-title" style="${isClosest ? 'color: #f97316;' : ''}">${displayName}</p>
+          <p class="card-subtitle">${u.birthday}</p>
+        </div>
+      </div>
+      <div class="countdown" style="color: ${daysColor}; font-weight: 700; font-size: ${isClosest ? '24px' : '20px'};">${daysText}</div>
+    `;
+    list.appendChild(card);
+  });
+
+  if (count === 0) list.innerHTML = '<p style="text-align: center; color: #999;">目前還沒有人設定生日喔！</p>';
+}
+
+window.renderTrips = function(trips, currentUserId) {
+  const list = document.getElementById('trip-list');
+  list.innerHTML = '';
+
+  if (trips.length === 0) {
+    list.innerHTML = '<p style="text-align: center; color: #999;">目前沒有人公佈行程喔！</p>';
     return;
   }
 
-  sortedDebts.forEach(d => {
-    const isSettled = d.isSettled;
-    const isIOwe = d.debtorId === currentUserId; // 是我欠別人錢
-    
-    // 找出對方的名字 (從 globalUsers)
-    const otherPersonId = isIOwe ? d.creditorId : d.debtorId;
-    const otherUser = window.globalUsers?.find(u => u.id === otherPersonId);
-    const otherName = otherUser ? otherUser.name : (isIOwe ? d.creditorName : '朋友');
+  // 自動沉底邏輯：過期的行程排到最後面
+  const todayStr = new Date().toISOString().split('T')[0];
+  const activeTrips = trips.filter(t => t.date >= todayStr);
+  const pastTrips = trips.filter(t => t.date < todayStr);
+  const sortedTrips = [...activeTrips, ...pastTrips];
 
-    let statusHtml = '';
-    if (isSettled) {
-       statusHtml = `<span class="tag-soft">已結清</span>`;
-    } else {
-       if (isIOwe) {
-           statusHtml = `<button class="secondary-btn" style="padding: 6px 12px; font-size: 13px;" onclick="alert('請私下轉帳給 ${otherName} 後，請對方按下確認結清喔！')">待還款</button>`;
-       } else {
-           statusHtml = `<button class="primary-btn" style="padding: 6px 12px; font-size: 13px;" onclick="settleDebt('${d.id}')">標記結清</button>`;
-       }
+  sortedTrips.forEach(t => {
+    const isPast = t.date < todayStr;
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.destination)}`;
+    const avatarText = t.avatar || '😎';
+    let avatarSize = '26px';
+    if (avatarText.length >= 8) avatarSize = '12px';
+    else if (avatarText.length >= 5) avatarSize = '16px';
+    else if (avatarText.length >= 3) avatarSize = '20px';
+
+    let exchangeHtml = '';
+    if (t.tripType === 'international' && t.exchangeInfo) {
+      const ex = t.exchangeInfo;
+      let text = '';
+      if (ex.mode === 'publish') text = `發佈日匯率 (1 ${ex.currency} = ${ex.rate.toFixed(4)} TWD)`;
+      else if (ex.mode === 'custom') text = `自訂匯率 (1 ${ex.currency} = ${ex.rate} TWD)`;
+      else if (ex.mode === 'purchase') text = `依購買當天匯率結算 (${ex.currency})`;
+      exchangeHtml = `<div style="display: inline-block; background: #f8fafc; color: #64748b; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 600;">💱 ${text}</div>`;
+    }
+
+    let actionsHtml = '';
+    if (t.uid === currentUserId) {
+      actionsHtml = `
+        <div class="card-actions">
+          <button class="icon-btn" onclick="editTrip('${t.id}')" title="修改">✏️</button>
+          <button class="icon-btn" onclick="deleteTrip('${t.id}')" title="刪除">🗑️</button>
+        </div>
+      `;
+    }
+
+    const tripProxies = window.globalGifts.filter(g => g.type === 'proxy' && g.tripId === t.id);
+    let proxyHtml = '';
+    if (tripProxies.length > 0) {
+      proxyHtml += `<div style="width: 100%; margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px; text-align: left;">`;
+      proxyHtml += `<p style="font-size: 14px; font-weight: 600; margin: 0 0 12px 0; color: #333;">🛒 朋友託付的代購：</p>`;
+      
+      tripProxies.forEach(p => {
+        const isPublisher = (t.uid === currentUserId);
+        let statusBtn = '';
+        if (isPublisher) {
+            statusBtn = p.status === 'purchased' 
+              ? `<span style="background: #f0fdf4; color: #16a34a; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold;">✅ 已買到</span>`
+              : `<button onclick="purchaseProxy('${p.id}')" style="background: #333; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">標記已買</button>`;
+        } else {
+            statusBtn = p.status === 'purchased' ? '✅ 朋友已買到' : '⏳ 尚未購買';
+        }
+
+        const proxyLink = p.link ? `<a href="${p.link}" target="_blank" style="color: #3b82f6; font-size: 12px; text-decoration: none; display: inline-block; margin-top: 4px; background: #eff6ff; padding: 2px 6px; border-radius: 4px;">🔗 參考網址</a>` : '';
+
+        proxyHtml += `
+          <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <div style="font-size: 14px; flex: 1; padding-right: 10px;">
+                <span style="font-weight: 600; color: #333;">${p.name}：</span>${p.itemName}
+                ${p.price ? `<div style="color: #ef4444; font-size: 12px; margin-top: 4px;">預估：$${p.price}</div>` : ''}
+                <div>${proxyLink}</div>
+              </div>
+              <div>${statusBtn}</div>
+          </div>`;
+      });
+      proxyHtml += `</div>`;
     }
 
     const card = document.createElement('div');
-    card.className = isSettled ? 'card archived' : 'card';
-    card.style.flexDirection = 'row';
-    card.style.alignItems = 'center';
+    card.className = isPast ? 'card archived' : 'card';
+    card.style.flexDirection = 'column';
+    card.style.alignItems = 'flex-start';
     
     card.innerHTML = `
-      <div style="flex: 1; text-align: left;">
-        <div style="font-size: 12px; color: #888; margin-bottom: 4px;">
-          ${isIOwe ? `<span style="color:#e74c3c; font-weight:bold;">你要給</span> ${otherName}` : `${otherName} <span style="color:#27ae60; font-weight:bold;">應給你</span>`}
+      ${actionsHtml}
+      <div style="background: ${isPast ? '#f1f5f9' : '#eff6ff'}; color: ${isPast ? '#64748b' : '#3b82f6'}; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px;">${isPast ? '🏁 行程已結束' : '✈️ 即將啟程'}</div>
+      
+      <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 15px; padding-right: 50px; box-sizing: border-box;">
+        <div class="avatar-circle">
+          <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
-        <div style="font-size: 15px; font-weight: 600; color: #2c2c2c;">${d.item}</div>
-        <div style="font-size: 18px; font-weight: bold; margin-top: 4px; color: ${isIOwe ? '#e74c3c' : '#2c2c2c'};">NT$ ${d.amount}</div>
+        <div style="text-align: left;">
+          <p class="card-title" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+            ${t.name} 要去 
+            <strong style="color: #2563eb; background: #dbeafe; padding: 4px 10px; border-radius: 8px; font-size: 18px; margin-left: 2px; display: inline-block;">📍 ${t.destination}</strong>
+          </p>
+          <p class="card-subtitle">日期：${t.date}</p>
+        </div>
       </div>
-      <div>${statusHtml}</div>
+      
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; text-align: left;">
+        ${exchangeHtml}
+        ${t.note ? `<div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 14px; color: #475569; line-height: 1.5;">備註：${t.note}</div>` : ''}
+      </div>
+
+      <div style="display: flex; gap: 10px; width: 100%;">
+        <a href="${mapUrl}" target="_blank" class="secondary-btn" style="text-align: center; text-decoration: none; flex: 1; padding: 10px 0; font-size: 14px; border-radius: 8px; font-weight: bold;">📍 附近地圖</a>
+        <button class="primary-btn" onclick="openProxyRequest('${t.destination}', '${t.id}')" style="flex: 1; padding: 10px 0; background-color: #3b82f6; font-size: 14px; border-radius: 8px;">📝 許願代購</button>
+      </div>
+      ${proxyHtml}
     `;
     list.appendChild(card);
   });
 }
 
-// 結算彈出視窗控制
-const debtModal = document.getElementById('debt-modal');
-document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => {
-  document.getElementById('debt-item').value = '';
-  document.getElementById('debt-amount').value = '';
-  
-  // 動態生成朋友核取方塊
-  const cbContainer = document.getElementById('debtor-checkboxes');
-  cbContainer.innerHTML = '';
-  const friends = window.globalUsers.filter(u => u.id !== window.auth.currentUser.uid);
-  if(friends.length === 0) cbContainer.innerHTML = '<span style="font-size:13px; color:#999;">目前還沒有其他朋友加入設定喔</span>';
-  
-  friends.forEach(f => {
-    cbContainer.innerHTML += `
-      <label style="display: block; margin-bottom: 8px; font-size: 15px; cursor: pointer;">
-        <input type="checkbox" class="debtor-cb" value="${f.id}" style="margin-right: 8px; transform: scale(1.2);"> 
-        ${f.avatar || '😎'} ${f.name}
-      </label>
-    `;
-  });
-
-  debtModal.classList.add('active');
-  document.body.classList.add('modal-open');
-});
-document.getElementById('close-debt-modal-btn')?.addEventListener('click', () => {
-  debtModal.classList.remove('active');
-  document.body.classList.remove('modal-open');
-});
-
-// 偷偷看總結算
-document.getElementById('secret-view-btn')?.addEventListener('click', () => {
-  let report = "【大家目前的欠款總覽】\n\n";
-  const balances = {};
-  
-  window.globalDebts.filter(d => !d.isSettled).forEach(d => {
-     if(!balances[d.debtorId]) balances[d.debtorId] = { name: '', owes: 0 };
-     balances[d.debtorId].owes += d.amount;
-     
-     // 嘗試找名字
-     const u = window.globalUsers.find(user => user.id === d.debtorId);
-     if(u) balances[d.debtorId].name = u.name;
-  });
-
-  let hasDebt = false;
-  for(let id in balances) {
-     if(balances[id].owes > 0) {
-        report += `👀 ${balances[id].name || '某朋友'} 總共還欠 ${balances[id].owes} 元\n`;
-        hasDebt = true;
-     }
-  }
-  
-  if(!hasDebt) report += "大家都互不相欠，太棒啦！";
-  alert(report);
-});
-
-// === 💸 結算中心專屬邏輯 (請貼在 app.js 最底下) ===
-window.renderDebts = function(debts, currentUserId) {
-  const list = document.getElementById('debt-list');
-  if (!list) return;
+window.renderGifts = function(gifts, currentUserId) {
+  const list = document.getElementById('gift-list');
   list.innerHTML = '';
+  const generalGifts = gifts.filter(g => g.type !== 'proxy');
 
-  if (!currentUserId) return;
-
-  const myCredits = debts.filter(d => d.creditorId === currentUserId && !d.isSettled);
-  const totalCredit = myCredits.reduce((sum, d) => sum + d.amount, 0);
-  const creditEl = document.getElementById('my-credit-total');
-  if (creditEl) creditEl.textContent = totalCredit.toLocaleString();
-
-  const myRelatedDebts = debts.filter(d => d.creditorId === currentUserId || d.debtorId === currentUserId);
-  const activeDebts = myRelatedDebts.filter(d => !d.isSettled);
-  const settledDebts = myRelatedDebts.filter(d => d.isSettled);
-  const sortedDebts = [...activeDebts, ...settledDebts];
-
-  if (sortedDebts.length === 0) {
-    list.innerHTML = '<p style="text-align: center; color: #999;">目前沒有任何帳目紀錄。</p>';
+  if (generalGifts.length === 0) {
+    list.innerHTML = '<p style="text-align: center; color: #999;">許願池空空的，快來新增吧！</p>';
     return;
   }
+  
+  // 自動沉底邏輯：已經收到的禮物排到最後面
+  const activeGifts = generalGifts.filter(g => g.status !== 'received');
+  const receivedGifts = generalGifts.filter(g => g.status === 'received');
+  const sortedGifts = [...activeGifts, ...receivedGifts];
 
-  sortedDebts.forEach(d => {
-    const isSettled = d.isSettled;
-    const isIOwe = d.debtorId === currentUserId;
-
-    const otherPersonId = isIOwe ? d.creditorId : d.debtorId;
-    const otherUser = window.globalUsers?.find(u => u.id === otherPersonId);
-    const otherName = otherUser ? otherUser.name : (isIOwe ? d.creditorName : '朋友');
-
-    let statusHtml = '';
-    if (isSettled) {
-       statusHtml = `<span class="tag-soft">已結清</span>`;
-    } else {
-       if (isIOwe) {
-           statusHtml = `<button class="secondary-btn" style="padding: 6px 12px; font-size: 13px;" onclick="alert('請私下轉帳給 ${otherName} 後，請對方按下確認結清喔！')">待還款</button>`;
-       } else {
-           statusHtml = `<button class="primary-btn" style="padding: 6px 12px; font-size: 13px; background-color: #2c2c2c; color: white;" onclick="settleDebt('${d.id}')">標記結清</button>`;
-       }
+  sortedGifts.forEach(g => {
+    const isReceived = g.status === 'received';
+    const linkHtml = g.link ? `<a href="${g.link}" target="_blank" style="display: inline-block; margin-top: 4px; padding: 6px 12px; background-color: #f8fafc; color: #3b82f6; text-decoration: none; font-size: 13px; border-radius: 6px; font-weight: 600;">🔗 參考連結</a>` : '';
+    const priceText = g.price ? `$${g.price}` : '未標價';
+    const tagHtml = g.type === 'birthday' ? `<span style="background: #fdf2f8; color: #ec4899; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 12px; display: inline-block;">🎂 ${g.birthdayYear} 生日願望</span>` : '';
+    
+    let actionsHtml = '';
+    if (g.uid === currentUserId) {
+      actionsHtml = `
+        <div class="card-actions">
+          <button class="icon-btn" onclick="editGift('${g.id}')" title="修改">✏️</button>
+          <button class="icon-btn" onclick="deleteGift('${g.id}')" title="刪除">🗑️</button>
+        </div>
+      `;
     }
 
+    let claimHtml = '';
+    if (isReceived) {
+        if (g.uid === currentUserId) {
+            claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 15px; text-align: center; border: 1px solid #bbf7d0;">🎉 願望已達成！已順利收到禮物啦</div>`;
+        } else {
+            claimHtml = `<div style="background: #f8fafc; color: #64748b; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 15px; text-align: center;">✅ 朋友已經收到這個禮物囉！</div>`;
+        }
+    } else {
+        if (g.uid !== currentUserId) {
+             if (g.claimedBy) {
+                 if (g.claimedBy === currentUserId) {
+                     claimHtml = `<div style="background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center; border: 1px solid #bbf7d0;">✅ 你已認領準備此禮物！</div>`;
+                 } else {
+                     claimHtml = `<div style="background: #f8fafc; color: #94a3b8; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; margin-top: 12px; text-align: center;">🎁 已有其他朋友認領</div>`;
+                 }
+             } else {
+                 claimHtml = `<button onclick="claimGift('${g.id}')" style="margin-top: 12px; width: 100%; background: #333; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🙋‍♂️ 我來準備這個驚喜</button>`;
+             }
+        } else {
+             if (g.claimedBy) {
+                 claimHtml = `
+                 <div style="color: #f97316; font-size: 13px; margin-top: 15px; text-align: center; font-weight: bold;">🎉 神秘小精靈已認領準備中！敬請期待</div>
+                 <button onclick="confirmGiftReceived('${g.id}')" style="margin-top: 12px; width: 100%; background: #ffffff; color: #333; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🎁 我收到這個禮物了！</button>
+                 `;
+             } else {
+                 claimHtml = `
+                 <div style="color: #94a3b8; font-size: 13px; margin-top: 15px; text-align: center; font-style: italic;">⏳ 期待中...</div>
+                 <button onclick="confirmGiftReceived('${g.id}')" style="margin-top: 12px; width: 100%; background: #ffffff; color: #333; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold;">🎁 我已經拿到這個禮物了</button>
+                 `;
+             }
+        }
+    }
+
+    const avatarText = g.avatar || '😎';
+    let avatarSize = '26px';
+    if (avatarText.length >= 8) avatarSize = '12px';
+    else if (avatarText.length >= 5) avatarSize = '16px'; 
+    else if (avatarText.length >= 3) avatarSize = '20px';
+
     const card = document.createElement('div');
-    card.className = isSettled ? 'card archived' : 'card';
-    card.style.flexDirection = 'row';
-    card.style.alignItems = 'center';
+    card.className = isReceived ? 'card archived' : 'card';
+    card.style.flexDirection = 'column';
+    card.style.alignItems = 'flex-start';
 
     card.innerHTML = `
-      <div style="flex: 1; text-align: left;">
-        <div style="font-size: 12px; color: #888; margin-bottom: 4px;">
-          ${isIOwe ? `<span style="color:#e74c3c; font-weight:bold;">你要給</span> ${otherName}` : `${otherName} <span style="color:#27ae60; font-weight:bold;">應給你</span>`}
+      ${actionsHtml}
+      ${tagHtml}
+      <div style="display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 15px; padding-right: 50px; box-sizing: border-box;">
+        <div class="avatar-circle">
+          <span style="font-size: ${avatarSize};">${avatarText}</span>
         </div>
-        <div style="font-size: 15px; font-weight: 600; color: #2c2c2c;">${d.item}</div>
-        <div style="font-size: 18px; font-weight: bold; margin-top: 4px; color: ${isIOwe ? '#e74c3c' : '#2c2c2c'};">NT$ ${d.amount}</div>
+        <div style="text-align: left;">
+          <p class="card-title">${g.name} 許願了</p>
+          <p class="card-subtitle" style="color: #000; font-weight: 700; font-size: 16px;">${g.itemName}</p>
+        </div>
       </div>
-      <div>${statusHtml}</div>
+
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left;">
+        <div style="font-weight: 600; color: #ef4444; font-size: 15px;">預估價格：${priceText}</div>
+        ${g.note ? `<div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 14px; color: #475569; line-height: 1.5;">備註：${g.note}</div>` : ''}
+        <div>${linkHtml}</div>
+        ${claimHtml}
+      </div>
     `;
     list.appendChild(card);
   });
 }
 
-const debtModal = document.getElementById('debt-modal');
-document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => {
-  document.getElementById('debt-item').value = '';
-  document.getElementById('debt-amount').value = '';
-
-  const cbContainer = document.getElementById('debtor-checkboxes');
-  cbContainer.innerHTML = '';
-  const friends = window.globalUsers?.filter(u => u.id !== window.auth?.currentUser?.uid) || [];
-  if(friends.length === 0) cbContainer.innerHTML = '<span style="font-size:13px; color:#999;">目前還沒有其他朋友加入設定喔</span>';
-
-  friends.forEach(f => {
-    cbContainer.innerHTML += `
-      <label style="display: block; margin-bottom: 8px; font-size: 15px; cursor: pointer;">
-        <input type="checkbox" class="debtor-cb" value="${f.id}" style="margin-right: 8px; transform: scale(1.2);">
-        ${f.avatar || '😎'} ${f.name}
-      </label>
-    `;
-  });
-
-  debtModal.classList.add('active');
+const tripModal = document.getElementById('trip-modal');
+document.getElementById('open-trip-modal-btn')?.addEventListener('click', () => {
+  window.editingTripId = null;
+  document.getElementById('add-trip-btn').textContent = "發佈行程並寄信通知";
+  document.getElementById('trip-dest').value = '';
+  document.getElementById('trip-date').value = '';
+  document.getElementById('trip-note').value = '';
+  tripModal.classList.add('active');
   document.body.classList.add('modal-open');
 });
-document.getElementById('close-debt-modal-btn')?.addEventListener('click', () => {
-  debtModal.classList.remove('active');
+document.getElementById('close-trip-modal-btn')?.addEventListener('click', () => {
+  tripModal.classList.remove('active');
   document.body.classList.remove('modal-open');
 });
 
-document.getElementById('secret-view-btn')?.addEventListener('click', () => {
-  let report = "【大家目前的欠款總覽】\n\n";
-  const balances = {};
-
-  window.globalDebts.filter(d => !d.isSettled).forEach(d => {
-     if(!balances[d.debtorId]) balances[d.debtorId] = { name: '', owes: 0 };
-     balances[d.debtorId].owes += d.amount;
-     const u = window.globalUsers.find(user => user.id === d.debtorId);
-     if(u) balances[d.debtorId].name = u.name;
-  });
-
-  let hasDebt = false;
-  for(let id in balances) {
-     if(balances[id].owes > 0) {
-        report += `👀 ${balances[id].name || '某朋友'} 總共還欠 ${balances[id].owes} 元\n`;
-        hasDebt = true;
-     }
-  }
-  if(!hasDebt) report += "大家都互不相欠，太棒啦！";
-  alert(report);
+const giftModal = document.getElementById('gift-modal');
+document.getElementById('open-gift-modal-btn')?.addEventListener('click', () => {
+  window.editingGiftId = null;
+  window.targetTripId = null;
+  document.getElementById('gift-type').value = 'general';
+  document.getElementById('gift-type').disabled = false;
+  document.getElementById('birthday-year-container').style.display = 'none';
+  document.getElementById('add-gift-btn').textContent = "丟入許願池";
+  document.getElementById('gift-modal-title').textContent = "新增許願商品";
+  document.getElementById('gift-name').value = '';
+  document.getElementById('gift-link').value = '';
+  document.getElementById('gift-price').value = '';
+  document.getElementById('gift-note').value = ""; 
+  giftModal.classList.add('active');
+  document.body.classList.add('modal-open');
 });
+document.getElementById('close-gift-modal-btn')?.addEventListener('click', () => {
+  giftModal.classList.remove('active');
+  document.body.classList.remove('modal-open');
+});
+
+window.openProxyRequest = function(destination, tripId) {
+  switchTab('gift');
+  window.editingGiftId = null;
+  window.targetTripId = tripId;
+  document.getElementById('gift-modal-title').textContent = `請託代購：${destination}`;
+  document.getElementById('gift-type').value = 'proxy'; 
+  document.getElementById('gift-type').disabled = true;
+  document.getElementById('birthday-year-container').style.display = 'none';
+  document.getElementById('gift-note').value = `綁定代購地點：${destination}`;
+  giftModal.classList.add('active');
+  document.body.classList.add('modal-open');
+};
