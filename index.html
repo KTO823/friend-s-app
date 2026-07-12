@@ -229,6 +229,18 @@
         </div>
       </div>
 
+      <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 320px; text-align: center;">
+          <p id="confirm-modal-message" style="font-size: 15px; color: #333; line-height: 1.6; margin: 8px 0 24px 0;"></p>
+          <div style="display: flex; gap: 10px;">
+            <button id="confirm-modal-cancel-btn" class="secondary-btn">取消</button>
+            <button id="confirm-modal-ok-btn" class="primary-btn">確定</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="toast-container"></div>
+
       <div id="bank-modal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
@@ -290,13 +302,13 @@
     document.getElementById('delete-account-btn').addEventListener('click', async () => {
       const user = auth.currentUser;
       if (!user) return;
-      if (!confirm("確定要刪除你的設定資料嗎？這會清除你的名稱與生日喔！")) return;
+      if (!(await showConfirm("確定要刪除你的設定資料嗎？這會清除你的名稱與生日喔！"))) return;
       try {
         await deleteDoc(doc(db, "users", user.uid));
-        alert("資料已清除，即將為您登出。");
+        showToast("資料已清除，即將為您登出。");
         await signOut(auth);
       } catch (error) {
-        alert("刪除失敗：" + error.message);
+        showToast("刪除失敗：" + error.message);
       }
     });
 
@@ -353,7 +365,7 @@
 
     document.getElementById('save-profile-btn').addEventListener('click', async () => {
       const user = auth.currentUser;
-      if (!user) return alert("請先登入！");
+      if (!user) return showToast("請先登入！");
       const name = document.getElementById('profile-name').value;
       const avatar = document.getElementById('profile-avatar').value || "😎";
       const birthday = document.getElementById('profile-birthday').value;
@@ -364,15 +376,15 @@
         const value = row.querySelector('.pay-value').value;
         if (value.trim() !== '') payments.push({ type, code, value });
       });
-      if (!name || !birthday) return alert("名稱和生日一定要填喔！");
+      if (!name || !birthday) return showToast("名稱和生日一定要填喔！");
       
       document.getElementById('save-profile-btn').textContent = "儲存中...";
       try {
         await setDoc(doc(db, "users", user.uid), { name, avatar, birthday, payments, email: user.email });
-        alert("設定已成功儲存！");
+        showToast("設定已成功儲存！");
         if (window.loadBirthdays) window.loadBirthdays();
       } catch (error) {
-        alert("儲存失敗：" + error.message);
+        showToast("儲存失敗：" + error.message);
       } finally {
         document.getElementById('save-profile-btn').textContent = "儲存設定";
       }
@@ -392,7 +404,7 @@
       const note = document.getElementById('trip-note').value;
       const tripType = document.querySelector('input[name="trip-type"]:checked').value;
 
-      if (!dest || !date) return alert("地點和日期一定要填！");
+      if (!dest || !date) return showToast("地點和日期一定要填！");
       
       let exchangeInfo = null;
       if (tripType === 'international') {
@@ -417,7 +429,7 @@
           await updateDoc(doc(db, "trips", window.editingTripId), {
             destination: dest, date: date, note: note, tripType: tripType, exchangeInfo: exchangeInfo
           });
-          alert("修改成功！");
+          showToast("修改成功！");
         } else {
           await addDoc(collection(db, "trips"), {
             uid: user.uid, name: myName, avatar: myAvatar, destination: dest, date: date, note: note, tripType: tripType, exchangeInfo: exchangeInfo, createdAt: new Date()
@@ -436,13 +448,13 @@
               });
             }
           });
-          alert("行程已發佈！通知信已寄出。");
+          showToast("行程已發佈！通知信已寄出。");
         }
         document.getElementById('trip-dest').value = '';
         document.getElementById('trip-modal').classList.remove('active');
         document.body.classList.remove('modal-open');
       } catch (error) {
-        alert("發佈失敗：" + error.message);
+        showToast("發佈失敗：" + error.message);
       } finally {
         btn.textContent = "發佈行程";
         btn.disabled = false;
@@ -458,7 +470,7 @@
       const itemPrice = document.getElementById('gift-price').value;
       const itemNote = document.getElementById('gift-note').value;
       
-      if (!itemName) return alert("至少要填寫商品名稱喔！");
+      if (!itemName) return showToast("至少要填寫商品名稱喔！");
       const btn = document.getElementById('add-gift-btn');
       btn.textContent = "丟入中...";
       btn.disabled = true;
@@ -485,7 +497,7 @@
             createdAt: new Date()
           });
         }
-        alert("已成功送出！");
+        showToast("已成功送出！");
         document.getElementById('gift-name').value = '';
         document.getElementById('gift-link').value = '';
         document.getElementById('gift-price').value = '';
@@ -493,7 +505,7 @@
         document.getElementById('gift-modal').classList.remove('active');
         document.body.classList.remove('modal-open');
       } catch (error) {
-        alert("新增失敗：" + error.message);
+        showToast("新增失敗：" + error.message);
       } finally {
         btn.textContent = "確認送出";
         btn.disabled = false;
@@ -506,7 +518,7 @@
       const itemName = document.getElementById('debt-item').value;
       const amount = parseFloat(document.getElementById('debt-amount').value);
 
-      if (!itemName || isNaN(amount)) return alert("請填寫完整項目與金額！");
+      if (!itemName || isNaN(amount)) return showToast("請填寫完整項目與金額！");
 
       const btn = document.getElementById('add-debt-btn');
 
@@ -515,14 +527,14 @@
         btn.textContent = "儲存中..."; btn.disabled = true;
         try {
           await updateDoc(doc(db, "debts", window.editingDebtId), { item: itemName, amount: amount });
-          alert("修改成功！");
+          showToast("修改成功！");
           window.editingDebtId = null;
           document.getElementById('debt-item').value = '';
           document.getElementById('debt-amount').value = '';
           document.getElementById('debt-modal').classList.remove('active');
           document.body.classList.remove('modal-open');
         } catch (error) {
-          alert("修改失敗：" + error.message);
+          showToast("修改失敗：" + error.message);
         } finally {
           btn.textContent = "記上一筆"; btn.disabled = false;
         }
@@ -533,7 +545,7 @@
       const debtorCheckboxes = document.querySelectorAll('.debtor-cb:checked');
       const debtorIds = Array.from(debtorCheckboxes).map(cb => cb.value).filter(id => id !== user.uid);
 
-      if (debtorIds.length === 0) return alert("請至少選擇一位欠款人！（不能欠自己錢喔）");
+      if (debtorIds.length === 0) return showToast("請至少選擇一位欠款人！（不能欠自己錢喔）");
 
       btn.textContent = "儲存中..."; btn.disabled = true;
 
@@ -547,13 +559,13 @@
               creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, isSettled: false, createdAt: new Date()
            });
         }
-        alert("記帳成功！");
+        showToast("記帳成功！");
         document.getElementById('debt-item').value = '';
         document.getElementById('debt-amount').value = '';
         document.getElementById('debt-modal').classList.remove('active');
         document.body.classList.remove('modal-open');
       } catch (error) {
-        alert("新增失敗：" + error.message);
+        showToast("新增失敗：" + error.message);
       } finally {
         btn.textContent = "記上一筆"; btn.disabled = false;
       }
@@ -596,23 +608,23 @@
     });
 
     window.settleDebt = async function(debtId) {
-      if(!confirm("確定這筆款項已經結清了嗎？")) return;
-      try { await updateDoc(doc(db, "debts", debtId), { isSettled: true }); } catch(e) { alert("操作失敗：" + e.message); }
+      if (!(await showConfirm("確定這筆款項已經結清了嗎？"))) return;
+      try { await updateDoc(doc(db, "debts", debtId), { isSettled: true }); } catch(e) { showToast("操作失敗：" + e.message); }
     };
 
     window.deleteTrip = async function(id) {
-      if(!confirm("確定要刪除這個行程嗎？")) return;
-      try { await deleteDoc(doc(db, "trips", id)); } catch(e) { alert("刪除失敗：" + e.message); }
+      if (!(await showConfirm("確定要刪除這個行程嗎？"))) return;
+      try { await deleteDoc(doc(db, "trips", id)); } catch(e) { showToast("刪除失敗：" + e.message); }
     };
 
     window.deleteGift = async function(id) {
-      if(!confirm("確定要刪除這筆資料嗎？")) return;
-      try { await deleteDoc(doc(db, "gifts", id)); } catch(e) { alert("刪除失敗：" + e.message); }
+      if (!(await showConfirm("確定要刪除這筆資料嗎？"))) return;
+      try { await deleteDoc(doc(db, "gifts", id)); } catch(e) { showToast("刪除失敗：" + e.message); }
     };
 
     window.claimGift = async function(giftId) {
-      if(!confirm("確定要認領這個願望嗎？壽星將不會知道是你準備的驚喜喔！")) return;
-      try { await updateDoc(doc(db, "gifts", giftId), { claimedBy: auth.currentUser.uid }); } catch(e) { alert("認領失敗：" + e.message); }
+      if (!(await showConfirm("確定要認領這個願望嗎？壽星將不會知道是你準備的驚喜喔！"))) return;
+      try { await updateDoc(doc(db, "gifts", giftId), { claimedBy: auth.currentUser.uid }); } catch(e) { showToast("認領失敗：" + e.message); }
     };
 
     // 買到代購商品：詢問實際花費金額，並自動記一筆欠款給喊單的人
@@ -641,7 +653,7 @@
 
       const input = document.getElementById('purchase-price-input').value;
       const actualPrice = parseFloat(input);
-      if (isNaN(actualPrice) || actualPrice < 0) return alert("請輸入正確的金額喔！");
+      if (isNaN(actualPrice) || actualPrice < 0) return showToast("請輸入正確的金額喔！");
 
       const btn = document.getElementById('confirm-purchase-price-btn');
       btn.textContent = "處理中..."; btn.disabled = true;
@@ -679,7 +691,7 @@
         document.getElementById('purchase-price-modal').classList.remove('active');
         document.body.classList.remove('modal-open');
       } catch(e) {
-        alert("標記失敗：" + e.message);
+        showToast("標記失敗：" + e.message);
       } finally {
         btn.textContent = "確認買到了"; btn.disabled = false;
       }
@@ -689,12 +701,12 @@
 
     // 補上確認收到禮物的 Bug 修復
     window.confirmGiftReceived = async function(giftId) {
-      if(!confirm("確定已經收到這個禮物了嗎？恭喜！")) return;
+      if (!(await showConfirm("確定已經收到這個禮物了嗎？恭喜！"))) return;
       try { 
         await updateDoc(doc(db, "gifts", giftId), { status: 'received' }); 
-        alert("已成功標記為收到！");
+        showToast("已成功標記為收到！");
       } catch(e) { 
-        alert("標記失敗：" + e.message); 
+        showToast("標記失敗：" + e.message); 
       }
     };
 

@@ -21,6 +21,51 @@ function emptyStateHtml(icon, title, subtitle) {
 }
 
 
+// 用來取代系統的 showToast()：跳出一個自己畫的小提示條，幾秒後自動消失
+window.showToast = function(message, type = 'default') {
+  const container = document.getElementById('toast-container');
+  if (!container) { console.log(message); return; }
+  const toast = document.createElement('div');
+  const isError = type === 'error' || /失敗|錯誤/.test(message);
+  const isSuccess = type === 'success';
+  toast.className = 'toast' + (isError ? ' toast-error' : (isSuccess ? ' toast-success' : ''));
+  toast.textContent = message;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  const duration = Math.min(8000, Math.max(2800, message.length * 70));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+};
+
+// 用來取代系統的 confirm()：跳出自己畫的確認視窗，回傳 Promise<boolean>
+window.showConfirm = function(message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('confirm-modal');
+    if (!modal) { resolve(window.confirm(message)); return; }
+    document.getElementById('confirm-modal-message').textContent = message;
+    modal.classList.add('active');
+    document.body.classList.add('modal-open');
+
+    const okBtn = document.getElementById('confirm-modal-ok-btn');
+    const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+
+    function cleanup(result) {
+      modal.classList.remove('active');
+      document.body.classList.remove('modal-open');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onOk() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+};
+
+
 // 新手導覽控制
 window.onload = function() {
   if (!localStorage.getItem('hasSeenTutorial')) {
@@ -385,8 +430,8 @@ window.openProxyRequest = function(destination, tripId) {
 
 // --- 沒買到按鈕功能 ---
 window.failProxy = async function(giftId) {
-  if(!confirm("確定沒買到嗎？這會標記為殘念喔！")) return;
-  try { await window.updateDoc(window.doc(window.db, "gifts", giftId), { status: 'failed' }); } catch(e) { alert("標記失敗：" + e.message); }
+  if (!(await showConfirm("確定沒買到嗎？這會標記為殘念喔！"))) return;
+  try { await window.updateDoc(window.doc(window.db, "gifts", giftId), { status: 'failed' }); } catch(e) { showToast("標記失敗：" + e.message); }
 };
 
 // --- 顯示朋友的多個銀行帳號功能 ---
@@ -394,7 +439,7 @@ window.showBankAccounts = function(userId) {
   const user = window.globalUsers.find(u => u.id === userId);
   const container = document.getElementById('bank-accounts-container');
   if (!user || !user.payments || user.payments.length === 0) {
-    alert('對方尚未設定收款方式喔！');
+    showToast('對方尚未設定收款方式喔！');
     return;
   }
   container.innerHTML = '';
@@ -413,7 +458,7 @@ window.showBankAccounts = function(userId) {
   document.querySelectorAll('.copy-pay-btn').forEach(btn => {
     btn.onclick = () => {
       navigator.clipboard.writeText(btn.dataset.value);
-      alert('已複製！');
+      showToast('已複製！');
     };
   });
   document.getElementById('bank-modal').classList.add('active');
@@ -529,11 +574,11 @@ window.settleAllForPerson = async function(personId) {
   if (!user) return;
   const targets = (window.globalDebts || []).filter(d => d.creditorId === user.uid && d.debtorId === personId && !d.isSettled);
   if (targets.length === 0) return;
-  if (!confirm(`確定要把這位朋友的 ${targets.length} 筆帳目都標記為已結清嗎？`)) return;
+  if (!(await showConfirm(`確定要把這位朋友的 ${targets.length} 筆帳目都標記為已結清嗎？`))) return;
   try {
     await Promise.all(targets.map(d => window.updateDoc(window.doc(window.db, "debts", d.id), { isSettled: true })));
   } catch (e) {
-    alert("操作失敗：" + e.message);
+    showToast("操作失敗：" + e.message);
   }
 };
 
@@ -552,11 +597,11 @@ window.editDebt = function(id) {
 };
 
 window.deleteDebt = async function(id) {
-  if (!confirm("確定要刪除這筆帳目嗎？")) return;
+  if (!(await showConfirm("確定要刪除這筆帳目嗎？"))) return;
   try {
     await window.deleteDoc(window.doc(window.db, "debts", id));
   } catch (e) {
-    alert("刪除失敗：" + e.message);
+    showToast("刪除失敗：" + e.message);
   }
 };
 
@@ -612,5 +657,5 @@ document.getElementById('secret-view-btn')?.addEventListener('click', () => {
      }
   }
   if(!hasDebt) report += "大家都互不相欠，太棒啦！";
-  alert(report);
+  showToast(report);
 });

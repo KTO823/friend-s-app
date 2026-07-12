@@ -94,6 +94,7 @@ nav button.active::after {
   width: 140px; height: 140px;
   background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 70%);
   border-radius: 50%;
+  pointer-events: none;
 }
 .balance-title {
   margin: 0 0 10px 0;
@@ -142,6 +143,39 @@ nav button.active::after {
 .form-input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-size: 15px; color: #333333; }
 
 body.modal-open { overflow: hidden; }
+
+#toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  width: 90%;
+  max-width: 460px;
+  pointer-events: none;
+}
+.toast {
+  background: #2c2c2c;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  max-width: 100%;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.toast-error { background: #d9534f; }
+.toast.toast-success { background: #4a7c59; }
 
 /* 新手導覽樣式 */
 .tutorial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 3000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.3s; }
