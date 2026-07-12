@@ -416,7 +416,6 @@ document.getElementById('close-gift-modal-btn')?.addEventListener('click', () =>
 });
 
 window.openProxyRequest = function(destination, tripId) {
-  switchTab('gift');
   window.editingGiftId = null;
   window.targetTripId = tripId;
   document.getElementById('gift-modal-title').textContent = `請託代購：${destination}`;

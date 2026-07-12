@@ -2,14 +2,14 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>記得給money</title>
   <meta property="og:title" content="記得給money">
   <meta property="og:description" content="一個紀錄生日、代購、欠款的網頁APP">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://friend-s-app.vercel.app/assets/icon-512.png">
+  <meta property="og:image" content="https://friend-s-app.vercel.app/使用圖片/logo.jpg">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://friend-s-app.vercel.app/assets/icon-512.png">
+  <meta name="twitter:image" content="https://friend-s-app.vercel.app/使用圖片/logo.jpg">
 
   <!-- 讓手機瀏覽器可以「加到主畫面」，開起來像真的 APP 一樣 -->
   <link rel="manifest" href="/manifest.json">
@@ -30,7 +30,7 @@
       <div class="tutorial-slider" id="tutorial-slider" onscroll="updateTutorialDots()">
         <div class="tutorial-slide">
           <div style="font-size: 50px; margin-bottom: 10px;">✨</div>
-          <h2 style="margin:0 0 10px 0; color:#333;">歡迎使用記得給money！</h2>
+          <h2 style="margin:0 0 10px 0; color:#333;">歡迎使用記得給money</h2>
           <p style="color:#666; font-size:15px; line-height:1.6;">這是一個專為你們打造的專屬空間。<br>完美結合生日記錄、許願池與代購功能。<br><br><span style="color:#3b82f6; font-weight:bold;">向左滑動 👉 來看看怎麼用吧！</span></p>
         </div>
         <div class="tutorial-slide">
@@ -222,6 +222,14 @@
           </div>
           <div class="input-section">
             <p id="purchase-price-item-name" style="text-align: left; font-size: 14px; color: #666; margin: 0 0 12px 0;"></p>
+
+            <div id="purchase-foreign-row" style="display: none;">
+              <label style="font-size: 13px; color: #666; display: block; margin-bottom: 5px; text-align: left;">花費金額（<span id="purchase-currency-code"></span>）</label>
+              <input type="number" id="purchase-foreign-amount" class="form-input" placeholder="輸入外幣金額">
+              <p id="purchase-rate-info" style="text-align: left; font-size: 12px; color: #999; margin: -6px 0 15px 0;"></p>
+            </div>
+
+            <label id="purchase-twd-label" style="font-size: 13px; color: #666; display: block; margin-bottom: 5px; text-align: left;">台幣金額</label>
             <input type="number" id="purchase-price-input" class="form-input" placeholder="實際花費金額 (NT$)">
             <p style="text-align: left; font-size: 12px; color: #999; margin: -6px 0 15px 0;">確認後會自動幫你在「結算」記一筆欠款給對方</p>
             <button id="confirm-purchase-price-btn" class="primary-btn">確認買到了</button>
@@ -629,15 +637,76 @@
 
     // 買到代購商品：詢問實際花費金額，並自動記一筆欠款給喊單的人
     // 開啟「買到囉，花了多少錢？」的自訂視窗（取代原本醜醜的系統 prompt）
-    window.purchaseProxy = function(giftId) {
+    window.purchaseProxy = async function(giftId) {
       const gift = window.globalGifts.find(g => g.id === giftId);
       if (!gift) return;
       window.pendingPurchaseGiftId = giftId;
+      window.purchaseExchangeRate = null;
+
       document.getElementById('purchase-price-item-name').textContent = `「${gift.itemName}」`;
       document.getElementById('purchase-price-input').value = gift.price || '';
-      document.getElementById('purchase-price-modal').classList.add('active');
-      document.body.classList.add('modal-open');
+      document.getElementById('purchase-foreign-amount').value = '';
+
+      const foreignRow = document.getElementById('purchase-foreign-row');
+      const rateInfo = document.getElementById('purchase-rate-info');
+      const twdLabel = document.getElementById('purchase-twd-label');
+      const trip = gift.tripId ? window.globalTrips?.find(t => t.id === gift.tripId) : null;
+
+      if (trip && trip.exchangeInfo && trip.exchangeInfo.currency) {
+        foreignRow.style.display = 'block';
+        twdLabel.textContent = '換算台幣';
+        document.getElementById('purchase-currency-code').textContent = trip.exchangeInfo.currency;
+
+        document.getElementById('purchase-price-modal').classList.add('active');
+        document.body.classList.add('modal-open');
+
+        let rate = trip.exchangeInfo.rate;
+        if (!rate) {
+          // 「代購完成時自動結算」模式：這時候才去抓當下的即時匯率
+          rateInfo.textContent = '⏳ 正在取得即時匯率...';
+          try {
+            const res = await fetch('https://open.er-api.com/v6/latest/' + trip.exchangeInfo.currency);
+            const data = await res.json();
+            rate = data.rates.TWD;
+          } catch (e) {
+            rate = null;
+          }
+        }
+
+        if (rate) {
+          window.purchaseExchangeRate = rate;
+          rateInfo.textContent = `💱 匯率：1 ${trip.exchangeInfo.currency} ≈ ${rate.toFixed(4)} 台幣`;
+        } else {
+          rateInfo.textContent = '❌ 無法取得即時匯率，請直接手動輸入下面的台幣金額';
+        }
+      } else {
+        foreignRow.style.display = 'none';
+        twdLabel.textContent = '台幣金額';
+        document.getElementById('purchase-price-modal').classList.add('active');
+        document.body.classList.add('modal-open');
+      }
     };
+
+    // 外幣 <-> 台幣 兩個欄位互相同步計算
+    (function() {
+      const foreignInput = document.getElementById('purchase-foreign-amount');
+      const twdInput = document.getElementById('purchase-price-input');
+      let syncing = false;
+      foreignInput?.addEventListener('input', () => {
+        if (syncing || !window.purchaseExchangeRate) return;
+        syncing = true;
+        const val = parseFloat(foreignInput.value);
+        twdInput.value = isNaN(val) ? '' : Math.round(val * window.purchaseExchangeRate);
+        syncing = false;
+      });
+      twdInput?.addEventListener('input', () => {
+        if (syncing || !window.purchaseExchangeRate) return;
+        syncing = true;
+        const val = parseFloat(twdInput.value);
+        foreignInput.value = isNaN(val) ? '' : (val / window.purchaseExchangeRate).toFixed(2);
+        syncing = false;
+      });
+    })();
 
     document.getElementById('close-purchase-price-modal-btn')?.addEventListener('click', () => {
       window.pendingPurchaseGiftId = null;
