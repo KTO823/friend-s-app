@@ -342,7 +342,6 @@
           this.nextElementSibling.nextElementSibling.placeholder = isBank ? '請輸入帳號' : '貼上轉帳連結';
         ">
           <option value="銀行帳號" ${type === '銀行帳號' ? 'selected' : ''}>銀行帳號</option>
-          <option value="LINE Pay" ${type === 'LINE Pay' ? 'selected' : ''}>LINE Pay</option>
         </select>
         <input type="text" class="bank-code" value="${code}" placeholder="代號" style="width: 70px; display: ${type === '銀行帳號' ? 'block' : 'none'};">
         <input type="text" class="pay-value" value="${value}" placeholder="${type === '銀行帳號' ? '請輸入帳號' : '貼上轉帳連結'}" style="flex: 1;">
