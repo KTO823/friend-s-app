@@ -1,18 +1,46 @@
+html {
+  height: 100%;
+  background-color: #faf9f6;
+}
+
 body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #faf9f6; 
+  background-color: #faf9f6;
+  height: 100%;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 輸入框裡的文字還是要能選取、長按，不然沒辦法編輯內容 */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 #app-container {
   max-width: 500px;
   margin: 0 auto;
   background-color: #ffffff;
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 header {
@@ -27,7 +55,7 @@ header {
 }
 
 header h1 { margin: 0; font-size: 18px; font-weight: 600; color: #333; letter-spacing: 1px; }
-main { flex: 1; padding: 15px 20px 90px 20px; }
+main { flex: 1; padding: 15px 20px calc(90px + env(safe-area-inset-bottom)) 20px; }
 .view { font-size: 15px; line-height: 1.6; color: #666666; text-align: center; }
 
 nav {
@@ -35,8 +63,9 @@ nav {
   background-color: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); 
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 500px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+  padding-bottom: env(safe-area-inset-bottom);
 }
-nav button { flex: 1; padding: 18px 0; background: none; border: none; font-size: 14px; color: #999999; cursor: pointer; transition: color 0.2s; position: relative; }
+nav button { flex: 1; padding: 18px 0; background: none; border: none; font-size: 14px; color: #999999; cursor: pointer; transition: color 0.2s; position: relative; touch-action: manipulation; }
 nav button:hover { color: #333333; }
 nav button.active { color: #333333; font-weight: 600; }
 nav button.active::after {
@@ -123,8 +152,8 @@ nav button.active::after {
 }
 
 .payment-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.payment-row select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; font-size: 14px; color: #333; }
-.payment-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; min-width: 0; }
+.payment-row select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; font-size: 16px; color: #333; }
+.payment-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; min-width: 0; }
 .delete-btn { background-color: #ff6b6b; color: white; border: none; border-radius: 8px; padding: 0 12px; font-size: 13px; cursor: pointer; white-space: nowrap; }
 
 .avatar-circle { width: 50px; height: 50px; min-width: 50px; border-radius: 50%; background-color: #f4f6f8; border: 1px solid #eef2f6; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
@@ -140,7 +169,7 @@ nav button.active::after {
 .modal-header h3 { margin: 0; font-size: 18px; color: #333; }
 .close-modal-btn { background: none; border: none; font-size: 24px; color: #999; cursor: pointer; }
 .input-section { background: #ffffff; padding: 0; border: none; margin-bottom: 0; }
-.form-input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-size: 15px; color: #333333; }
+.form-input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-size: 16px; color: #333333; }
 
 body.modal-open { overflow: hidden; }
 
@@ -192,7 +221,15 @@ body.modal-open { overflow: hidden; }
 /* 修復手機版年月欄位跑出去的問題 */
 input[type="date"], .form-input {
   max-width: 100%;
+  width: 100%;
   box-sizing: border-box;
+  font-size: 16px; /* 一定要 >=16px，不然 iOS 會在點擊時自動放大整個畫面 */
+  min-width: 0;
+}
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
 }
 
 /* 隱藏原生多餘按鈕 */
@@ -200,4 +237,9 @@ input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-calendar-picker-indicator {
     display: none;
     -webkit-appearance: none;
+}
+
+/* 讓按鈕/連結點擊反應更快、不會有雙擊縮放的延遲，質感更像原生 App */
+button, a, .icon-btn, .card, nav button {
+  touch-action: manipulation;
 }
