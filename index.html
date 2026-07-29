@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>記得給money</title>
-  <meta property="og:title" content="記得給money">
+  <title>記得給money｜卡戳</title>
+  <meta property="og:title" content="記得給money｜卡戳">
   <meta property="og:description" content="一個紀錄生日、代購、欠款的網頁APP">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://friend-s-app.vercel.app/使用圖片/logo.jpg">
@@ -30,7 +30,7 @@
       <div class="tutorial-slider" id="tutorial-slider" onscroll="updateTutorialDots()">
         <div class="tutorial-slide">
           <div style="font-size: 50px; margin-bottom: 10px;">✨</div>
-          <h2 style="margin:0 0 10px 0; color:#333;">歡迎使用記得給money</h2>
+          <h2 style="margin:0 0 10px 0; color:#333;">歡迎使用卡戳</h2>
           <p style="color:#666; font-size:15px; line-height:1.6;">這是一個專為你們打造的專屬空間。<br>完美結合生日記錄、許願池與代購功能。<br><br><span style="color:#3b82f6; font-weight:bold;">向左滑動 👉 來看看怎麼用吧！</span></p>
         </div>
         <div class="tutorial-slide">
@@ -178,6 +178,7 @@
           <div class="input-section">
             <input type="text" id="debt-item" class="form-input" placeholder="項目 (例：環球影城門票)">
             <input type="number" id="debt-amount" class="form-input" placeholder="總金額 (NT$)">
+            <input type="text" id="debt-link" class="form-input" placeholder="商品連結／照片連結 (選填)">
             <label style="font-size: 13px; color: #777; margin-bottom: 8px; display: block; text-align: left;">誰需要給你錢？ (將自動平分)</label>
             <div id="debtor-checkboxes" style="text-align: left; margin-bottom: 15px; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #e6e6e6;">
               </div>
@@ -525,20 +526,22 @@
       const user = auth.currentUser;
       const itemName = document.getElementById('debt-item').value;
       const amount = parseFloat(document.getElementById('debt-amount').value);
+      const itemLink = document.getElementById('debt-link').value.trim();
 
       if (!itemName || isNaN(amount)) return showToast("請填寫完整項目與金額！");
 
       const btn = document.getElementById('add-debt-btn');
 
-      // 修改模式：只更新這一筆帳目的項目與金額
+      // 修改模式：只更新這一筆帳目的項目、金額與連結
       if (window.editingDebtId) {
         btn.textContent = "儲存中..."; btn.disabled = true;
         try {
-          await updateDoc(doc(db, "debts", window.editingDebtId), { item: itemName, amount: amount });
+          await updateDoc(doc(db, "debts", window.editingDebtId), { item: itemName, amount: amount, link: itemLink });
           showToast("修改成功！");
           window.editingDebtId = null;
           document.getElementById('debt-item').value = '';
           document.getElementById('debt-amount').value = '';
+          document.getElementById('debt-link').value = '';
           document.getElementById('debt-modal').classList.remove('active');
           document.body.classList.remove('modal-open');
         } catch (error) {
@@ -564,12 +567,13 @@
 
         for (const debtorId of debtorIds) {
            await addDoc(collection(db, "debts"), {
-              creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, isSettled: false, createdAt: new Date()
+              creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, link: itemLink, isSettled: false, createdAt: new Date()
            });
         }
         showToast("記帳成功！");
         document.getElementById('debt-item').value = '';
         document.getElementById('debt-amount').value = '';
+        document.getElementById('debt-link').value = '';
         document.getElementById('debt-modal').classList.remove('active');
         document.body.classList.remove('modal-open');
       } catch (error) {
@@ -741,6 +745,7 @@
             debtorId: gift.uid,
             amount: actualPrice,
             item: `代購：${gift.itemName}`,
+            link: gift.link || '',
             isSettled: false,
             createdAt: new Date(),
             sourceGiftId: giftId

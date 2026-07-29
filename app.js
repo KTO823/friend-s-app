@@ -520,11 +520,13 @@ window.renderDebts = function(debts, currentUserId) {
       const ownerActionsHtml = isMine ? `
           <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); editDebt('${d.id}')" title="修改">✏️</button>
           <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); deleteDebt('${d.id}')" title="刪除">🗑️</button>` : '';
+      const linkHtml = d.link ? `<a href="${escapeHtml(d.link)}" target="_blank" onclick="event.stopPropagation();" style="font-size:12px; color:#888; text-decoration:underline; display:inline-block; margin-top:2px;">🔗 查看圖片</a>` : '';
       itemsHtml += `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid #f2f2f2;">
           <div style="text-align:left;">
             <div style="font-size:14px; color:#333;">${escapeHtml(d.item)}</div>
             <div style="font-size:15px; font-weight:600; color:${isIOwe ? '#d9534f' : '#333'};">NT$ ${d.amount}</div>
+            ${linkHtml}
           </div>
           <div style="display:flex; align-items:center; gap:6px;">
             ${itemActionHtml}
@@ -588,8 +590,9 @@ window.editDebt = function(id) {
   window.editingDebtId = id;
   document.getElementById('debt-item').value = debt.item;
   document.getElementById('debt-amount').value = debt.amount;
+  document.getElementById('debt-link').value = debt.link || '';
   const cbContainer = document.getElementById('debtor-checkboxes');
-  cbContainer.innerHTML = '<p style="font-size:13px; color:#999; margin:0;">修改模式僅能調整項目名稱與金額。若要更換欠款對象，請刪除後重新新增一筆。</p>';
+  cbContainer.innerHTML = '<p style="font-size:13px; color:#999; margin:0;">修改模式僅能調整項目名稱、金額與連結。若要更換欠款對象，請刪除後重新新增一筆。</p>';
   document.getElementById('add-debt-btn').textContent = "儲存修改";
   document.getElementById('debt-modal').classList.add('active');
   document.body.classList.add('modal-open');
@@ -611,6 +614,7 @@ document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => 
   document.getElementById('add-debt-btn').textContent = "記上一筆";
   document.getElementById('debt-item').value = '';
   document.getElementById('debt-amount').value = '';
+  document.getElementById('debt-link').value = '';
 
   const cbContainer = document.getElementById('debtor-checkboxes');
   cbContainer.innerHTML = '';
