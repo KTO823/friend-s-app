@@ -973,24 +973,34 @@
       if (window.unsubscribeDebts) window.unsubscribeDebts();
       if (!groupId) { window.globalTrips = []; window.globalGifts = []; window.globalDebts = []; return; }
 
+      // 資料讀取失敗時（例如 Firestore 索引還沒建好），直接跳提示，不要默默失敗讓人以為是 bug
+      function onLoadError(label, err) {
+        console.error(label + " 讀取失敗", err);
+        if (err.code === 'failed-precondition') {
+          showToast(`${label}資料庫索引還在準備中，請稍等 1-2 分鐘後重新整理頁面`, 'error');
+        } else {
+          showToast(`${label}讀取失敗：${err.message}`, 'error');
+        }
+      }
+
       window.unsubscribeTrips = onSnapshot(query(collection(db, "trips"), where("groupId", "==", groupId), orderBy("createdAt", "desc")), (snapshot) => {
         window.globalTrips = [];
         snapshot.forEach(doc => window.globalTrips.push({ id: doc.id, ...doc.data() }));
         if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
-      });
+      }, (err) => onLoadError("行程", err));
 
       window.unsubscribeGifts = onSnapshot(query(collection(db, "gifts"), where("groupId", "==", groupId), orderBy("createdAt", "desc")), (snapshot) => {
         window.globalGifts = [];
         snapshot.forEach(doc => window.globalGifts.push({ id: doc.id, ...doc.data() }));
         if (window.renderGifts) window.renderGifts(window.globalGifts, auth.currentUser?.uid);
         if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
-      });
+      }, (err) => onLoadError("代購", err));
 
       window.unsubscribeDebts = onSnapshot(query(collection(db, "debts"), where("groupId", "==", groupId), orderBy("createdAt", "desc")), (snapshot) => {
         window.globalDebts = [];
         snapshot.forEach(doc => window.globalDebts.push({ id: doc.id, ...doc.data() }));
         if (window.renderDebts) window.renderDebts(window.globalDebts, auth.currentUser?.uid);
-      });
+      }, (err) => onLoadError("結算", err));
     }
 
     window.settleDebt = async function(debtId) {
