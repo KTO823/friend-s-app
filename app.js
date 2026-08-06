@@ -92,6 +92,7 @@ window.updateTutorialDots = function() {
 // 動態更新 Header 標題與切換分頁
 function switchTab(tabId) {
   // 切換前，先把所有分頁都隱藏
+  document.getElementById('groups-view').style.display = 'none';
   document.getElementById('birthday-view').style.display = 'none';
   document.getElementById('gift-view').style.display = 'none';
   document.getElementById('trip-view').style.display = 'none';
@@ -109,7 +110,10 @@ function switchTab(tabId) {
 
   // 更新最上方的標題
   const headerTitle = document.getElementById('main-header-title');
-  if (tabId === 'birthday') {
+  if (tabId === 'groups') {
+    headerTitle.innerHTML = '👥 我的群組';
+    if (window.renderGroupsList) window.renderGroupsList();
+  } else if (tabId === 'birthday') {
     headerTitle.innerHTML = '🎂 生日倒數';
     if (window.loadBirthdays) window.loadBirthdays();
   } else if (tabId === 'gift') {
@@ -507,26 +511,47 @@ window.renderDebts = function(debts, currentUserId) {
     const otherName = escapeHtml(otherUser ? otherUser.name : (isIOwe ? items[0].creditorName : '朋友'));
     const otherAvatar = escapeHtml(otherUser?.avatar || '😎');
 
-    const activeItems = items.filter(d => !d.isSettled);
-    const settledItems = items.filter(d => d.isSettled);
+    // 「代購」來源的帳目才需要另外追蹤商品有沒有交到手上；手動記的帳（例如分票錢）不需要，視同一律已交付
+    const isFullyDone = (d) => d.isSettled && (!d.sourceGiftId || d.itemReceived);
+    const activeItems = items.filter(d => !isFullyDone(d));
+    const settledItems = items.filter(isFullyDone);
     const activeTotal = activeItems.reduce((sum, d) => sum + d.amount, 0);
 
     let itemsHtml = '';
     activeItems.forEach(d => {
       const isMine = d.creditorId === currentUserId;
-      const itemActionHtml = isIOwe
+      const itemActionHtml = d.isSettled ? '' : (isIOwe
         ? `<button style="background: #f5f5f5; border: 1px solid #ddd; color: #333; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); showBankAccounts('${otherPersonId}')">💳 轉帳</button>`
-        : `<button style="background: #2c2c2c; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); settleDebt('${d.id}')">確認收款</button>`;
+        : `<button style="background: #2c2c2c; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); settleDebt('${d.id}')">確認收款</button>`);
       const ownerActionsHtml = isMine ? `
           <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); editDebt('${d.id}')" title="修改">✏️</button>
           <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); deleteDebt('${d.id}')" title="刪除">🗑️</button>` : '';
       const linkHtml = d.link ? `<a href="${escapeHtml(d.link)}" target="_blank" onclick="event.stopPropagation();" style="font-size:12px; color:#888; text-decoration:underline; display:inline-block; margin-top:2px;">🔗 查看圖片</a>` : '';
+
+      // 錢/貨兩件事分開標示狀態
+      let statusRow = '';
+      if (d.sourceGiftId) {
+        const moneyBadge = d.isSettled
+          ? `<span style="font-size:11px; color:#4a7c59;">💰 已收款</span>`
+          : `<span style="font-size:11px; color:#d9534f;">💰 待付款</span>`;
+        let itemBadge;
+        if (d.itemReceived) {
+          itemBadge = `<span style="font-size:11px; color:#4a7c59;">📦 已拿到商品</span>`;
+        } else if (isIOwe) {
+          itemBadge = `<button style="background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; padding:2px 8px; border-radius:10px; font-size:11px; cursor:pointer;" onclick="event.stopPropagation(); confirmItemReceived('${d.id}')">📦 確認收到商品</button>`;
+        } else {
+          itemBadge = `<span style="font-size:11px; color:#c2410c;">📦 等待對方收貨</span>`;
+        }
+        statusRow = `<div style="display:flex; gap:8px; align-items:center; margin-top:4px;">${moneyBadge}${itemBadge}</div>`;
+      }
+
       itemsHtml += `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid #f2f2f2;">
           <div style="text-align:left;">
             <div style="font-size:14px; color:#333;">${escapeHtml(d.item)}</div>
             <div style="font-size:15px; font-weight:600; color:${isIOwe ? '#d9534f' : '#333'};">NT$ ${d.amount}</div>
             ${linkHtml}
+            ${statusRow}
           </div>
           <div style="display:flex; align-items:center; gap:6px;">
             ${itemActionHtml}
@@ -538,11 +563,13 @@ window.renderDebts = function(debts, currentUserId) {
     const settledHtml = settledItems.map(d => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #f2f2f2; opacity:0.5;">
           <div style="text-align:left; font-size:13px; color:#999;">${escapeHtml(d.item)} · NT$ ${d.amount}</div>
-          <span style="font-size:12px; color:#aaa;">已結清</span>
+          <span style="font-size:12px; color:#aaa;">已完成</span>
         </div>`).join('');
 
-    const bulkBtnHtml = (!isIOwe && activeItems.length > 1)
-      ? `<button style="width:100%; margin-top:10px; background:#2c2c2c; color:white; border:none; padding:10px 0; border-radius:8px; font-size:13px; cursor:pointer;" onclick="event.stopPropagation(); settleAllForPerson('${otherPersonId}')">✅ ${otherName} 全部結清（共 NT$${activeTotal.toLocaleString()}）</button>`
+    // 一次全部結清只處理「錢」，商品交付還是要個別確認，所以只在對方全部都還沒付款時才提供這顆按鈕
+    const unpaidCount = activeItems.filter(d => !isIOwe && !d.isSettled).length;
+    const bulkBtnHtml = (!isIOwe && unpaidCount > 1)
+      ? `<button style="width:100%; margin-top:10px; background:#2c2c2c; color:white; border:none; padding:10px 0; border-radius:8px; font-size:13px; cursor:pointer;" onclick="event.stopPropagation(); settleAllForPerson('${otherPersonId}')">✅ ${otherName} 全部標記已收款（共 NT$${activeTotal.toLocaleString()}）</button>`
       : '';
 
     const card = document.createElement('div');
@@ -618,8 +645,10 @@ document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => 
 
   const cbContainer = document.getElementById('debtor-checkboxes');
   cbContainer.innerHTML = '';
-  const friends = window.globalUsers?.filter(u => u.id !== window.auth?.currentUser?.uid) || [];
-  if(friends.length === 0) cbContainer.innerHTML = '<span style="font-size:13px; color:#999;">目前還沒有其他朋友加入設定喔</span>';
+  const currentGroup = window.myGroups?.find(g => g.id === window.activeGroupId);
+  const memberIds = currentGroup?.memberIds || [];
+  const friends = (window.globalUsers?.filter(u => memberIds.includes(u.id) && u.id !== window.auth?.currentUser?.uid)) || [];
+  if(friends.length === 0) cbContainer.innerHTML = '<span style="font-size:13px; color:#999;">這個群組還沒有其他成員喔，先邀請朋友加入吧！</span>';
 
   friends.forEach(f => {
     cbContainer.innerHTML += `

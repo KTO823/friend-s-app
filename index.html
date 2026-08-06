@@ -63,11 +63,16 @@
 
   <div id="app-container">
     <header>
-      <h1 id="main-header-title">🎂 生日倒數</h1>
+      <h1 id="main-header-title">👥 我的群組</h1>
     </header>
 
     <main>
-      <div id="birthday-view" class="view">
+      <div id="groups-view" class="view">
+        <div id="groups-list" class="card-list"></div>
+        <button id="open-groups-modal-btn" class="fab-btn">＋</button>
+      </div>
+
+      <div id="birthday-view" class="view" style="display: none;">
         <div id="birthday-list" class="card-list">
           <p style="text-align: center; color: #999;">正在載入資料...</p>
         </div>
@@ -193,6 +198,16 @@
         </div>
         <div id="profile-section" style="display: none; margin-top: 10px;">
           <p>目前登入：<span id="user-email"></span></p>
+
+          <div class="input-group" style="background: #fafafa; border: 1px solid #eee; border-radius: 12px; padding: 15px;">
+            <label style="font-weight: 600; color: #333; margin-bottom: 10px;">👥 目前群組</label>
+            <div id="current-group-info" style="margin-bottom: 10px;"></div>
+            <select id="group-switch-select" class="form-input" style="display: none; margin-bottom: 10px;"></select>
+            <div style="display: flex; gap: 8px;">
+              <button id="open-group-modal-btn" class="secondary-btn" style="margin: 0;">管理／切換群組</button>
+            </div>
+          </div>
+
           <div class="input-group">
             <label>自定義暱稱：</label>
             <input type="text" id="profile-name" placeholder="輸入你們之間的稱呼">
@@ -215,6 +230,41 @@
           <button id="logout-btn" class="secondary-btn" style="margin-top: 10px;">登出</button>
         </div>
       </div>
+
+      <div id="group-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="group-modal-title">👥 管理群組</h3>
+            <button id="close-group-modal-btn" class="close-modal-btn">✕</button>
+          </div>
+          <div id="group-modal-current-section" class="input-section" style="margin-bottom: 20px; display: none;">
+            <p style="font-size: 13px; color: #888; text-align: left; margin: 0 0 8px 0;">目前群組成員</p>
+            <div id="group-modal-members" style="text-align: left; margin-bottom: 12px;"></div>
+            <p style="font-size: 13px; color: #888; text-align: left; margin: 0 0 6px 0;">邀請碼（分享給朋友）</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+              <input type="text" id="group-modal-invite-code" class="form-input" style="margin: 0; text-align: center; font-weight: 700; letter-spacing: 2px;" readonly>
+              <button id="copy-invite-code-btn" class="secondary-btn" style="width: auto; padding: 12px 16px; margin: 0;">複製</button>
+            </div>
+            <button id="leave-group-btn" class="secondary-btn" style="color: #ef4444; background-color: #fef2f2;">離開此群組</button>
+          </div>
+
+          <div class="input-section" style="text-align: left; border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px;">
+            <p style="font-size: 12px; color: #aaa; margin: 0 0 8px 0;">升級成群組版之前的舊資料（如果有的話），可以搬進目前這個群組：</p>
+            <button id="migrate-legacy-btn" class="secondary-btn">📦 把我的舊資料搬進目前群組</button>
+          </div>
+
+          <div class="input-section" style="text-align: left;">
+            <p style="font-size: 13px; color: #888; margin: 0 0 8px 0;">建立新群組</p>
+            <input type="text" id="new-group-name" class="form-input" placeholder="群組名稱 (例：好麻吉們)">
+            <button id="create-group-btn" class="primary-btn" style="margin-bottom: 20px;">建立新群組</button>
+
+            <p style="font-size: 13px; color: #888; margin: 0 0 8px 0;">用邀請碼加入其他群組</p>
+            <input type="text" id="join-group-code" class="form-input" placeholder="輸入邀請碼" style="text-transform: uppercase;">
+            <button id="join-group-btn" class="secondary-btn">加入群組</button>
+          </div>
+        </div>
+      </div>
+
       <div id="purchase-price-modal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
@@ -263,8 +313,9 @@
     </main>
 
     <nav>
-      <button onclick="switchTab('birthday')" id="nav-birthday" class="active">生日</button>
-      <button onclick="switchTab('gift')" id="nav-gift">禮物</button>
+      <button onclick="switchTab('groups')" id="nav-groups" class="active">群組</button>
+      <button onclick="switchTab('birthday')" id="nav-birthday" style="display: none;">生日</button>
+      <button onclick="switchTab('gift')" id="nav-gift" style="display: none;">禮物</button>
       <button onclick="switchTab('trip')" id="nav-trip">行程代購</button>
       <button onclick="switchTab('debt')" id="nav-debt">結算</button>
       <button onclick="switchTab('settings')" id="nav-settings">設定</button>
@@ -273,7 +324,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, collection, getDocs, getDoc, addDoc, query, orderBy, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, collection, getDocs, getDoc, addDoc, query, where, orderBy, onSnapshot, deleteDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     emailjs.init("bsabF8ne0dAqVxF-D"); 
@@ -322,6 +373,313 @@
     });
 
     window.currentFetchedRate = 0;
+
+    // ========== 群組功能 ==========
+    window.activeGroupId = null;
+    window.myGroups = []; // 我所屬的所有群組完整資料
+
+    function generateInviteCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去掉容易混淆的 0/O/1/I
+      let code = '';
+      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    // 切換到指定群組：更新使用者的 activeGroupId，並重新訂閱該群組的行程/代購/結算資料
+    window.switchActiveGroup = async function(groupId) {
+      const user = auth.currentUser;
+      if (!user || !groupId) return;
+      window.activeGroupId = groupId;
+      try {
+        await setDoc(doc(db, "users", user.uid), { activeGroupId: groupId }, { merge: true });
+      } catch (e) { /* 不阻擋畫面更新 */ }
+      subscribeToGroupData(groupId);
+      renderGroupUI();
+      document.getElementById('group-modal-title').textContent = '👥 管理群組';
+      document.getElementById('close-group-modal-btn').style.display = 'block';
+    };
+
+    window.loadMyGroups = async function() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const userData = userDoc.exists() ? userDoc.data() : {};
+      const groupIds = userData.groupIds || [];
+
+      window.myGroups = [];
+      for (const gid of groupIds) {
+        const gDoc = await getDoc(doc(db, "groups", gid));
+        if (gDoc.exists()) window.myGroups.push({ id: gDoc.id, ...gDoc.data() });
+      }
+
+      if (window.myGroups.length === 0) {
+        // 還沒有任何群組：強制打開群組視窗，隱藏關閉按鈕，逼使用者先建立或加入
+        window.activeGroupId = null;
+        document.getElementById('group-modal-title').textContent = '👥 歡迎！先建立或加入一個群組';
+        document.getElementById('close-group-modal-btn').style.display = 'none';
+        document.getElementById('group-modal').classList.add('active');
+        document.body.classList.add('modal-open');
+        renderGroupUI();
+        return;
+      }
+
+      document.getElementById('group-modal-title').textContent = '👥 管理群組';
+      document.getElementById('close-group-modal-btn').style.display = 'block';
+
+      let activeId = userData.activeGroupId;
+      if (!activeId || !window.myGroups.find(g => g.id === activeId)) {
+        activeId = window.myGroups[0].id;
+      }
+      window.activeGroupId = activeId;
+      subscribeToGroupData(activeId);
+      renderGroupUI();
+    };
+
+    window.createGroup = async function() {
+      const user = auth.currentUser;
+      if (!user) return showToast("請先登入！");
+      const nameInput = document.getElementById('new-group-name');
+      const name = nameInput.value.trim();
+      if (!name) return showToast("請輸入群組名稱！");
+
+      const btn = document.getElementById('create-group-btn');
+      btn.disabled = true; btn.textContent = "建立中...";
+      try {
+        const inviteCode = generateInviteCode();
+        const newGroupRef = doc(collection(db, "groups"));
+        await setDoc(newGroupRef, {
+          name, inviteCode, ownerId: user.uid, memberIds: [user.uid], createdAt: new Date()
+        });
+        await setDoc(doc(db, "users", user.uid), {
+          groupIds: arrayUnion(newGroupRef.id)
+        }, { merge: true });
+
+        nameInput.value = '';
+        await window.loadMyGroups();
+        await window.switchActiveGroup(newGroupRef.id);
+        showToast(`群組「${name}」建立成功！`, 'success');
+        document.getElementById('group-modal')?.classList.remove('active');
+        document.body.classList.remove('modal-open');
+      } catch (e) {
+        showToast("建立失敗：" + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "建立新群組";
+      }
+    };
+
+    window.joinGroupByCode = async function() {
+      const user = auth.currentUser;
+      if (!user) return showToast("請先登入！");
+      const codeInput = document.getElementById('join-group-code');
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) return showToast("請輸入邀請碼！");
+
+      const btn = document.getElementById('join-group-btn');
+      btn.disabled = true; btn.textContent = "加入中...";
+      try {
+        const q = query(collection(db, "groups"), where("inviteCode", "==", code));
+        const snap = await getDocs(q);
+        if (snap.empty) { showToast("找不到這個邀請碼，請確認拼字喔！"); return; }
+
+        const groupDoc = snap.docs[0];
+        const groupData = groupDoc.data();
+        if ((groupData.memberIds || []).includes(user.uid)) {
+          showToast("你已經在這個群組囉！");
+          await window.switchActiveGroup(groupDoc.id);
+          return;
+        }
+
+        await setDoc(doc(db, "groups", groupDoc.id), { memberIds: arrayUnion(user.uid) }, { merge: true });
+        await setDoc(doc(db, "users", user.uid), { groupIds: arrayUnion(groupDoc.id) }, { merge: true });
+
+        codeInput.value = '';
+        await window.loadMyGroups();
+        await window.switchActiveGroup(groupDoc.id);
+        showToast(`成功加入「${groupData.name}」！`, 'success');
+        document.getElementById('group-modal')?.classList.remove('active');
+        document.body.classList.remove('modal-open');
+      } catch (e) {
+        showToast("加入失敗：" + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "加入群組";
+      }
+    };
+
+    window.leaveCurrentGroup = async function() {
+      const user = auth.currentUser;
+      const groupId = window.activeGroupId;
+      if (!user || !groupId) return;
+      const group = window.myGroups.find(g => g.id === groupId);
+      if (!group) return;
+      if (window.myGroups.length === 1) return showToast("這是你唯一的群組，離開前請先建立或加入另一個群組！");
+      if (!(await showConfirm(`確定要離開「${group.name}」嗎？離開後就看不到這個群組的行程與帳目了。`))) return;
+
+      try {
+        await setDoc(doc(db, "groups", groupId), { memberIds: arrayRemove(user.uid) }, { merge: true });
+        await setDoc(doc(db, "users", user.uid), { groupIds: arrayRemove(groupId) }, { merge: true });
+        document.getElementById('group-modal')?.classList.remove('active');
+        document.body.classList.remove('modal-open');
+        await window.loadMyGroups();
+        if (window.activeGroupId) await window.switchActiveGroup(window.activeGroupId);
+        showToast("已離開群組");
+      } catch (e) {
+        showToast("操作失敗：" + e.message);
+      }
+    };
+
+    // 更新設定頁 + 彈出視窗裡跟群組相關的畫面
+    function renderGroupUI() {
+      const currentGroup = window.myGroups.find(g => g.id === window.activeGroupId);
+      const infoEl = document.getElementById('current-group-info');
+      const switchSelect = document.getElementById('group-switch-select');
+
+      if (infoEl) {
+        infoEl.innerHTML = currentGroup
+          ? `<p style="margin:0; font-size:16px; font-weight:600; color:#333;">${escapeHtml(currentGroup.name)}</p><p style="margin:4px 0 0 0; font-size:12px; color:#999;">成員 ${(currentGroup.memberIds || []).length} 人</p>`
+          : `<p style="margin:0; font-size:14px; color:#999;">尚未加入任何群組</p>`;
+      }
+
+      if (switchSelect) {
+        if (window.myGroups.length > 1) {
+          switchSelect.style.display = 'block';
+          switchSelect.innerHTML = window.myGroups.map(g =>
+            `<option value="${g.id}" ${g.id === window.activeGroupId ? 'selected' : ''}>${escapeHtml(g.name)}</option>`
+          ).join('');
+        } else {
+          switchSelect.style.display = 'none';
+        }
+      }
+
+      // 群組管理視窗內容
+      const currentSection = document.getElementById('group-modal-current-section');
+      if (currentGroup && currentSection) {
+        currentSection.style.display = 'block';
+        document.getElementById('group-modal-invite-code').value = currentGroup.inviteCode;
+        const membersEl = document.getElementById('group-modal-members');
+        const memberIds = currentGroup.memberIds || [];
+        membersEl.innerHTML = memberIds.map(uid => {
+          const u = window.globalUsers?.find(u => u.id === uid);
+          return `<span style="display:inline-block; background:#f0f0f0; border-radius:20px; padding:5px 12px; font-size:13px; margin:0 6px 6px 0;">${escapeHtml(u?.avatar || '😎')} ${escapeHtml(u?.name || '（尚未設定資料）')}</span>`;
+        }).join('');
+      } else if (currentSection) {
+        currentSection.style.display = 'none';
+      }
+
+      window.renderGroupsList();
+    }
+
+    // 「群組」分頁：列出我所在的所有群組，點卡片可以查看成員／切換過去
+    window.renderGroupsList = function() {
+      const list = document.getElementById('groups-list');
+      if (!list) return;
+      list.innerHTML = '';
+
+      if (!window.myGroups || window.myGroups.length === 0) {
+        list.innerHTML = emptyStateHtml('👥', '還沒有加入任何群組', '按右下角的 + 按鈕，建立或加入一個群組吧！');
+        return;
+      }
+
+      window.myGroups.forEach(g => {
+        const isActive = g.id === window.activeGroupId;
+        const memberIds = g.memberIds || [];
+        const avatarsHtml = memberIds.slice(0, 5).map(uid => {
+          const u = window.globalUsers?.find(u => u.id === uid);
+          return `<div class="avatar-circle" style="width:28px; height:28px; min-width:28px; margin-left:-8px; border:2px solid #fff;"><span style="font-size:13px;">${escapeHtml(u?.avatar || '😎')}</span></div>`;
+        }).join('');
+        const extraCount = memberIds.length > 5 ? `<span style="font-size:12px; color:#999; margin-left:6px;">+${memberIds.length - 5}</span>` : '';
+
+        const card = document.createElement('div');
+        card.className = isActive ? 'card closest-birthday' : 'card';
+        card.style.cursor = 'pointer';
+        card.onclick = () => window.openGroupDetail(g.id);
+        card.innerHTML = `
+          <div style="text-align:left;">
+            <p class="card-title" style="${isActive ? 'color:#f97316;' : ''}">${isActive ? '✅ ' : ''}${escapeHtml(g.name)}</p>
+            <div style="display:flex; align-items:center; margin-top:8px; padding-left:8px;">${avatarsHtml}${extraCount}</div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    };
+
+    // 點群組卡片：切換過去成為目前使用中的群組，並打開詳細資訊（成員、邀請碼）
+    window.openGroupDetail = async function(groupId) {
+      if (groupId !== window.activeGroupId) {
+        await window.switchActiveGroup(groupId);
+        showToast(`已切換到「${window.myGroups.find(g => g.id === groupId)?.name}」`, 'success');
+      }
+      renderGroupUI();
+      document.getElementById('group-modal-title').textContent = '👥 群組成員';
+      document.getElementById('close-group-modal-btn').style.display = 'block';
+      document.getElementById('group-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    };
+
+    document.getElementById('open-group-modal-btn')?.addEventListener('click', () => {
+      renderGroupUI();
+      document.getElementById('group-modal-title').textContent = '👥 管理群組';
+      document.getElementById('close-group-modal-btn').style.display = 'block';
+      document.getElementById('group-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    });
+
+    document.getElementById('open-groups-modal-btn')?.addEventListener('click', () => {
+      renderGroupUI();
+      document.getElementById('group-modal-title').textContent = window.myGroups?.length ? '👥 管理群組' : '👥 建立或加入群組';
+      document.getElementById('close-group-modal-btn').style.display = window.myGroups?.length ? 'block' : 'none';
+      document.getElementById('group-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    });
+
+    document.getElementById('close-group-modal-btn')?.addEventListener('click', () => {
+      document.getElementById('group-modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
+
+    document.getElementById('create-group-btn')?.addEventListener('click', () => window.createGroup());
+    document.getElementById('join-group-btn')?.addEventListener('click', () => window.joinGroupByCode());
+    document.getElementById('leave-group-btn')?.addEventListener('click', () => window.leaveCurrentGroup());
+    document.getElementById('copy-invite-code-btn')?.addEventListener('click', () => {
+      const code = document.getElementById('group-modal-invite-code').value;
+      navigator.clipboard.writeText(code);
+      showToast("邀請碼已複製！");
+    });
+
+    // 把「還沒有 groupId」的舊資料（升級群組版之前留下的）搬進目前的群組。
+    // 只會處理「自己是擁有者/債主」的那些，其他人也各自登入按一次，資料就會全部歸位。
+    document.getElementById('migrate-legacy-btn')?.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (!user || !window.activeGroupId) return;
+      const btn = document.getElementById('migrate-legacy-btn');
+      btn.disabled = true; btn.textContent = "搬移中...";
+
+      try {
+        let count = 0;
+
+        const tripSnap = await getDocs(query(collection(db, "trips"), where("uid", "==", user.uid)));
+        for (const d of tripSnap.docs) {
+          if (!d.data().groupId) { await updateDoc(d.ref, { groupId: window.activeGroupId }); count++; }
+        }
+
+        const giftSnap = await getDocs(query(collection(db, "gifts"), where("uid", "==", user.uid)));
+        for (const d of giftSnap.docs) {
+          if (!d.data().groupId) { await updateDoc(d.ref, { groupId: window.activeGroupId }); count++; }
+        }
+
+        const debtSnap = await getDocs(query(collection(db, "debts"), where("creditorId", "==", user.uid)));
+        for (const d of debtSnap.docs) {
+          if (!d.data().groupId) { await updateDoc(d.ref, { groupId: window.activeGroupId }); count++; }
+        }
+
+        showToast(count > 0 ? `已搬移 ${count} 筆資料進來！` : "沒有找到需要搬移的舊資料", 'success');
+      } catch (e) {
+        showToast("搬移失敗：" + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "📦 把我的舊資料搬進目前群組";
+      }
+    });
+    // ========== 群組功能結束 ==========
+
     window.toggleExchangeOptions = function() {
       const isIntl = document.querySelector('input[name="trip-type"]:checked').value === 'international';
       document.getElementById('exchange-rate-section').style.display = isIntl ? 'block' : 'none';
@@ -441,22 +799,23 @@
           showToast("修改成功！");
         } else {
           await addDoc(collection(db, "trips"), {
-            uid: user.uid, name: myName, avatar: myAvatar, destination: dest, date: date, note: note, tripType: tripType, exchangeInfo: exchangeInfo, createdAt: new Date()
+            uid: user.uid, name: myName, avatar: myAvatar, destination: dest, date: date, note: note, tripType: tripType, exchangeInfo: exchangeInfo, groupId: window.activeGroupId, createdAt: new Date()
           });
-          
-          const usersSnap = await getDocs(collection(db, "users"));
-          usersSnap.forEach(u => {
-            const friendEmail = u.data().email;
-            if (friendEmail && friendEmail !== user.email) {
+
+          const currentGroup = window.myGroups.find(g => g.id === window.activeGroupId);
+          const memberIds = (currentGroup?.memberIds || []).filter(uid => uid !== user.uid);
+          for (const uid of memberIds) {
+            const u = window.globalUsers?.find(u => u.id === uid);
+            if (u?.email) {
               sendNotifyEmail(EMAILJS_TEMPLATE_TRIP, {
-                to_email: friendEmail,
-                to_name: u.data().name,
+                to_email: u.email,
+                to_name: u.name,
                 sender_name: myName,
                 destination: dest,
                 trip_date: date
               });
             }
-          });
+          }
           showToast("行程已發佈！通知信已寄出。");
         }
         document.getElementById('trip-dest').value = '';
@@ -503,6 +862,7 @@
             status: 'pending',
             claimedBy: null,
             itemName, link: itemLink, price: itemPrice, note: itemNote,
+            groupId: window.activeGroupId,
             createdAt: new Date()
           });
         }
@@ -567,7 +927,7 @@
 
         for (const debtorId of debtorIds) {
            await addDoc(collection(db, "debts"), {
-              creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, link: itemLink, isSettled: false, createdAt: new Date()
+              creditorId: user.uid, creditorName: myName, debtorId: debtorId, amount: splitAmount, item: itemName, link: itemLink, isSettled: false, groupId: window.activeGroupId, createdAt: new Date()
            });
         }
         showToast("記帳成功！");
@@ -598,30 +958,49 @@
     onSnapshot(collection(db, "users"), (snapshot) => {
       window.globalUsers = [];
       snapshot.forEach(doc => window.globalUsers.push({ id: doc.id, ...doc.data() }));
+      renderGroupUI();
     });
 
-    onSnapshot(query(collection(db, "trips"), orderBy("createdAt", "desc")), (snapshot) => {
-      window.globalTrips = [];
-      snapshot.forEach(doc => window.globalTrips.push({ id: doc.id, ...doc.data() }));
-      if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
-    });
+    window.unsubscribeTrips = null;
+    window.unsubscribeGifts = null;
+    window.unsubscribeDebts = null;
 
-    onSnapshot(query(collection(db, "gifts"), orderBy("createdAt", "desc")), (snapshot) => {
-      window.globalGifts = [];
-      snapshot.forEach(doc => window.globalGifts.push({ id: doc.id, ...doc.data() }));
-      if (window.renderGifts) window.renderGifts(window.globalGifts, auth.currentUser?.uid);
-      if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
-    });
+    // 訂閱「目前群組」的行程／代購／結算資料。切換群組時會先取消上一組的訂閱，
+    // 避免不同群組的資料混在一起顯示。
+    function subscribeToGroupData(groupId) {
+      if (window.unsubscribeTrips) window.unsubscribeTrips();
+      if (window.unsubscribeGifts) window.unsubscribeGifts();
+      if (window.unsubscribeDebts) window.unsubscribeDebts();
+      if (!groupId) { window.globalTrips = []; window.globalGifts = []; window.globalDebts = []; return; }
 
-    onSnapshot(query(collection(db, "debts"), orderBy("createdAt", "desc")), (snapshot) => {
-      window.globalDebts = [];
-      snapshot.forEach(doc => window.globalDebts.push({ id: doc.id, ...doc.data() }));
-      if (window.renderDebts) window.renderDebts(window.globalDebts, auth.currentUser?.uid);
-    });
+      window.unsubscribeTrips = onSnapshot(query(collection(db, "trips"), where("groupId", "==", groupId), orderBy("createdAt", "desc")), (snapshot) => {
+        window.globalTrips = [];
+        snapshot.forEach(doc => window.globalTrips.push({ id: doc.id, ...doc.data() }));
+        if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
+      });
+
+      window.unsubscribeGifts = onSnapshot(query(collection(db, "gifts"), where("groupId", "==", groupId), orderBy("createdAt", "desc")), (snapshot) => {
+        window.globalGifts = [];
+        snapshot.forEach(doc => window.globalGifts.push({ id: doc.id, ...doc.data() }));
+        if (window.renderGifts) window.renderGifts(window.globalGifts, auth.currentUser?.uid);
+        if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
+      });
+
+      window.unsubscribeDebts = onSnapshot(query(collection(db, "debts"), where("groupId", "==", groupId), orderBy("createdAt", "desc")), (snapshot) => {
+        window.globalDebts = [];
+        snapshot.forEach(doc => window.globalDebts.push({ id: doc.id, ...doc.data() }));
+        if (window.renderDebts) window.renderDebts(window.globalDebts, auth.currentUser?.uid);
+      });
+    }
 
     window.settleDebt = async function(debtId) {
       if (!(await showConfirm("確定這筆款項已經結清了嗎？"))) return;
       try { await updateDoc(doc(db, "debts", debtId), { isSettled: true }); } catch(e) { showToast("操作失敗：" + e.message); }
+    };
+
+    window.confirmItemReceived = async function(debtId) {
+      if (!(await showConfirm("確定已經收到這個代購商品了嗎？"))) return;
+      try { await updateDoc(doc(db, "debts", debtId), { itemReceived: true }); } catch(e) { showToast("操作失敗：" + e.message); }
     };
 
     window.deleteTrip = async function(id) {
@@ -747,6 +1126,8 @@
             item: `代購：${gift.itemName}`,
             link: gift.link || '',
             isSettled: false,
+            itemReceived: false,
+            groupId: window.activeGroupId,
             createdAt: new Date(),
             sourceGiftId: giftId
           });
@@ -844,6 +1225,7 @@
           if (data.payments) data.payments.forEach(p => window.addPaymentRow(p.type, p.code || '', p.value));
         }
         window.loadBirthdays();
+        window.loadMyGroups();
       } else {
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('profile-section').style.display = 'none';
@@ -857,6 +1239,16 @@
 
         document.getElementById('open-gift-modal-btn').style.display = 'none';
         document.getElementById('gift-login-hint').style.display = 'block';
+
+        // 登出後清空群組狀態，避免下一個登入的人看到殘留資料
+        document.getElementById('group-modal')?.classList.remove('active');
+        document.body.classList.remove('modal-open');
+        window.activeGroupId = null;
+        window.myGroups = [];
+        subscribeToGroupData(null);
+        if (window.renderTrips) window.renderTrips([], null);
+        if (window.renderGifts) window.renderGifts([], null);
+        if (window.renderDebts) window.renderDebts([], null);
       }
     });
   </script>
