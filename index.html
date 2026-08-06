@@ -68,7 +68,30 @@
 
     <main>
       <div id="groups-view" class="view">
-        <div id="groups-list" class="card-list"></div>
+        <div id="groups-list-container">
+          <div id="groups-list" class="card-list"></div>
+        </div>
+        <div id="group-detail-container" style="display: none;">
+          <button id="back-to-groups-btn" style="background:none; border:none; color:#666; font-size:14px; cursor:pointer; padding:0 0 15px 0; display:flex; align-items:center; gap:4px;">← 返回群組列表</button>
+          <div class="card" style="flex-direction:column; align-items:stretch; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <p class="card-title" id="group-detail-name" style="font-size:18px;"></p>
+                <p class="card-subtitle" id="group-detail-count"></p>
+              </div>
+            </div>
+            <div style="border-top:1px solid #f2f2f2; margin-top:15px; padding-top:15px; text-align:left;">
+              <p style="font-size:12px; color:#999; margin:0 0 6px 0;">邀請碼（分享給朋友）</p>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="group-detail-invite-code" class="form-input" style="margin:0; text-align:center; font-weight:700; letter-spacing:2px;" readonly>
+                <button id="group-detail-copy-btn" class="secondary-btn" style="width:auto; padding:12px 16px; margin:0;">複製</button>
+              </div>
+            </div>
+          </div>
+          <p style="text-align:left; font-size:13px; color:#888; margin:0 0 10px 4px;">群組成員</p>
+          <div id="group-detail-members" class="card-list"></div>
+          <button id="group-detail-leave-btn" class="secondary-btn" style="margin-top:20px; color:#ef4444; background-color:#fef2f2;">離開此群組</button>
+        </div>
         <button id="open-groups-modal-btn" class="fab-btn">＋</button>
       </div>
 
@@ -377,6 +400,7 @@
     // ========== 群組功能 ==========
     window.activeGroupId = null;
     window.myGroups = []; // 我所屬的所有群組完整資料
+    window.viewingGroupId = null; // 目前在「群組」分頁裡點開查看的是哪一個
 
     function generateInviteCode() {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去掉容易混淆的 0/O/1/I
@@ -566,6 +590,7 @@
       }
 
       window.renderGroupsList();
+      if (window.viewingGroupId && typeof renderGroupDetailPage === 'function') renderGroupDetailPage();
     }
 
     // 「群組」分頁：列出我所在的所有群組，點卡片可以查看成員／切換過去
@@ -602,18 +627,71 @@
       });
     };
 
-    // 點群組卡片：切換過去成為目前使用中的群組，並打開詳細資訊（成員、邀請碼）
+    // 點群組卡片：切換過去成為目前使用中的群組，並把「群組」分頁切換成成員列表頁面
     window.openGroupDetail = async function(groupId) {
       if (groupId !== window.activeGroupId) {
         await window.switchActiveGroup(groupId);
-        showToast(`已切換到「${window.myGroups.find(g => g.id === groupId)?.name}」`, 'success');
       }
-      renderGroupUI();
-      document.getElementById('group-modal-title').textContent = '👥 群組成員';
-      document.getElementById('close-group-modal-btn').style.display = 'block';
-      document.getElementById('group-modal').classList.add('active');
-      document.body.classList.add('modal-open');
+      window.viewingGroupId = groupId;
+      renderGroupDetailPage();
+      document.getElementById('groups-list-container').style.display = 'none';
+      document.getElementById('group-detail-container').style.display = 'block';
+      document.getElementById('open-groups-modal-btn').style.display = 'none';
+
+      const g = window.myGroups.find(gr => gr.id === groupId);
+      document.getElementById('main-header-title').innerHTML = `👥 ${escapeHtml(g?.name || '')}`;
     };
+
+    // 返回群組列表頁
+    window.showGroupsList = function() {
+      window.viewingGroupId = null;
+      document.getElementById('groups-list-container').style.display = 'block';
+      document.getElementById('group-detail-container').style.display = 'none';
+      document.getElementById('open-groups-modal-btn').style.display = 'flex';
+      document.getElementById('main-header-title').innerHTML = '👥 我的群組';
+      window.renderGroupsList();
+    };
+
+    document.getElementById('back-to-groups-btn')?.addEventListener('click', window.showGroupsList);
+
+    // 渲染單一群組的成員頁（風格比照原本的生日倒數卡片）
+    function renderGroupDetailPage() {
+      const g = window.myGroups.find(gr => gr.id === window.viewingGroupId);
+      if (!g) return;
+
+      document.getElementById('group-detail-name').textContent = g.name;
+      document.getElementById('group-detail-count').textContent = `成員 ${(g.memberIds || []).length} 人`;
+      document.getElementById('group-detail-invite-code').value = g.inviteCode;
+
+      const membersEl = document.getElementById('group-detail-members');
+      const memberIds = g.memberIds || [];
+      membersEl.innerHTML = memberIds.map(uid => {
+        const u = window.globalUsers?.find(u => u.id === uid);
+        const isMe = uid === auth.currentUser?.uid;
+        return `
+          <div class="card" style="align-items:center;">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <div class="avatar-circle"><span style="font-size:22px;">${escapeHtml(u?.avatar || '😎')}</span></div>
+              <div style="text-align:left;">
+                <p class="card-title">${escapeHtml(u?.name || '（尚未設定資料）')}${isMe ? ' (你)' : ''}</p>
+                ${u?.birthday ? `<p class="card-subtitle">${escapeHtml(u.birthday)}</p>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('group-detail-copy-btn')?.addEventListener('click', () => {
+      const code = document.getElementById('group-detail-invite-code').value;
+      navigator.clipboard.writeText(code);
+      showToast("邀請碼已複製！");
+    });
+
+    document.getElementById('group-detail-leave-btn')?.addEventListener('click', async () => {
+      await window.leaveCurrentGroup();
+      window.showGroupsList();
+    });
 
     document.getElementById('open-group-modal-btn')?.addEventListener('click', () => {
       renderGroupUI();

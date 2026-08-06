@@ -111,8 +111,8 @@ function switchTab(tabId) {
   // 更新最上方的標題
   const headerTitle = document.getElementById('main-header-title');
   if (tabId === 'groups') {
-    headerTitle.innerHTML = '👥 我的群組';
-    if (window.renderGroupsList) window.renderGroupsList();
+    if (window.showGroupsList) window.showGroupsList();
+    else headerTitle.innerHTML = '👥 我的群組';
   } else if (tabId === 'birthday') {
     headerTitle.innerHTML = '🎂 生日倒數';
     if (window.loadBirthdays) window.loadBirthdays();
