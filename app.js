@@ -511,8 +511,10 @@ window.renderDebts = function(debts, currentUserId) {
     const otherName = escapeHtml(otherUser ? otherUser.name : (isIOwe ? items[0].creditorName : '朋友'));
     const otherAvatar = escapeHtml(otherUser?.avatar || '😎');
 
-    // 「代購」來源的帳目才需要另外追蹤商品有沒有交到手上；手動記的帳（例如分票錢）不需要，視同一律已交付
-    const isFullyDone = (d) => d.isSettled && (!d.sourceGiftId || d.itemReceived);
+    // 有「連結／照片」的帳目，代表牽涉到實體商品，才需要另外追蹤東西有沒有交到手上；
+    // 純粹分攤費用（沒有連結）的帳目不需要，錢一付清就算完成。
+    const hasItemTracking = (d) => !!(d.sourceGiftId || d.link);
+    const isFullyDone = (d) => d.isSettled && (!hasItemTracking(d) || d.itemReceived);
     const activeItems = items.filter(d => !isFullyDone(d));
     const settledItems = items.filter(isFullyDone);
     const activeTotal = activeItems.reduce((sum, d) => sum + d.amount, 0);
@@ -521,49 +523,49 @@ window.renderDebts = function(debts, currentUserId) {
     activeItems.forEach(d => {
       const isMine = d.creditorId === currentUserId;
       const itemActionHtml = d.isSettled ? '' : (isIOwe
-        ? `<button style="background: #f5f5f5; border: 1px solid #ddd; color: #333; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); showBankAccounts('${otherPersonId}')">💳 轉帳</button>`
-        : `<button style="background: #2c2c2c; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="event.stopPropagation(); settleDebt('${d.id}')">確認收款</button>`);
+        ? `<button style="background: #f5f5f5; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap;" onclick="event.stopPropagation(); showBankAccounts('${otherPersonId}')">💳 轉帳</button>`
+        : `<button style="background: #2c2c2c; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap;" onclick="event.stopPropagation(); settleDebt('${d.id}')">確認收款</button>`);
       const ownerActionsHtml = isMine ? `
-          <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); editDebt('${d.id}')" title="修改">✏️</button>
-          <button class="icon-btn" style="width:24px;height:24px;font-size:12px;" onclick="event.stopPropagation(); deleteDebt('${d.id}')" title="刪除">🗑️</button>` : '';
-      const linkHtml = d.link ? `<a href="${escapeHtml(d.link)}" target="_blank" onclick="event.stopPropagation();" style="font-size:12px; color:#888; text-decoration:underline; display:inline-block; margin-top:2px;">🔗 查看圖片</a>` : '';
+          <button class="icon-btn" style="width:26px;height:26px;font-size:12px; flex-shrink:0;" onclick="event.stopPropagation(); editDebt('${d.id}')" title="修改">✏️</button>
+          <button class="icon-btn" style="width:26px;height:26px;font-size:12px; flex-shrink:0;" onclick="event.stopPropagation(); deleteDebt('${d.id}')" title="刪除">🗑️</button>` : '';
+      const linkHtml = d.link ? `<a href="${escapeHtml(d.link)}" target="_blank" onclick="event.stopPropagation();" style="font-size:12px; color:#888; text-decoration:underline; display:inline-block; margin-top:4px;">🔗 查看圖片</a>` : '';
 
       // 錢/貨兩件事分開標示狀態
       let statusRow = '';
-      if (d.sourceGiftId) {
+      if (hasItemTracking(d)) {
         const moneyBadge = d.isSettled
-          ? `<span style="font-size:11px; color:#4a7c59;">💰 已收款</span>`
-          : `<span style="font-size:11px; color:#d9534f;">💰 待付款</span>`;
+          ? `<span style="font-size:11px; color:#4a7c59; white-space:nowrap;">💰 已收款</span>`
+          : `<span style="font-size:11px; color:#d9534f; white-space:nowrap;">💰 待付款</span>`;
         let itemBadge;
         if (d.itemReceived) {
-          itemBadge = `<span style="font-size:11px; color:#4a7c59;">📦 已拿到商品</span>`;
+          itemBadge = `<span style="font-size:11px; color:#4a7c59; white-space:nowrap;">📦 已拿到商品</span>`;
         } else if (isIOwe) {
-          itemBadge = `<button style="background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; padding:2px 8px; border-radius:10px; font-size:11px; cursor:pointer;" onclick="event.stopPropagation(); confirmItemReceived('${d.id}')">📦 確認收到商品</button>`;
+          itemBadge = `<button style="background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; padding:2px 8px; border-radius:10px; font-size:11px; cursor:pointer; white-space:nowrap;" onclick="event.stopPropagation(); confirmItemReceived('${d.id}')">📦 確認收到商品</button>`;
         } else {
-          itemBadge = `<span style="font-size:11px; color:#c2410c;">📦 等待對方收貨</span>`;
+          itemBadge = `<span style="font-size:11px; color:#c2410c; white-space:nowrap;">📦 等待對方收貨</span>`;
         }
-        statusRow = `<div style="display:flex; gap:8px; align-items:center; margin-top:4px;">${moneyBadge}${itemBadge}</div>`;
+        statusRow = `<div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:6px;">${moneyBadge}${itemBadge}</div>`;
       }
 
       itemsHtml += `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid #f2f2f2;">
-          <div style="text-align:left;">
-            <div style="font-size:14px; color:#333;">${escapeHtml(d.item)}</div>
-            <div style="font-size:15px; font-weight:600; color:${isIOwe ? '#d9534f' : '#333'};">NT$ ${d.amount}</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:12px 0; border-top:1px solid #f2f2f2;">
+          <div style="text-align:left; min-width:0; flex:1;">
+            <div style="font-size:14px; color:#333; word-break:break-word;">${escapeHtml(d.item)}</div>
+            <div style="font-size:15px; font-weight:600; color:${isIOwe ? '#d9534f' : '#333'}; margin-top:2px;">NT$ ${d.amount}</div>
             ${linkHtml}
             ${statusRow}
           </div>
-          <div style="display:flex; align-items:center; gap:6px;">
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">
             ${itemActionHtml}
-            ${ownerActionsHtml}
+            <div style="display:flex; gap:6px;">${ownerActionsHtml}</div>
           </div>
         </div>`;
     });
 
     const settledHtml = settledItems.map(d => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #f2f2f2; opacity:0.5;">
-          <div style="text-align:left; font-size:13px; color:#999;">${escapeHtml(d.item)} · NT$ ${d.amount}</div>
-          <span style="font-size:12px; color:#aaa;">已完成</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-top:1px solid #f2f2f2; opacity:0.5;">
+          <div style="text-align:left; font-size:13px; color:#999; word-break:break-word;">${escapeHtml(d.item)} · NT$ ${d.amount}</div>
+          <span style="font-size:12px; color:#aaa; white-space:nowrap; flex-shrink:0;">已完成</span>
         </div>`).join('');
 
     // 一次全部結清只處理「錢」，商品交付還是要個別確認，所以只在對方全部都還沒付款時才提供這顆按鈕

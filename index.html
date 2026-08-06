@@ -73,26 +73,43 @@
         </div>
         <div id="group-detail-container" style="display: none;">
           <button id="back-to-groups-btn" style="background:none; border:none; color:#666; font-size:14px; cursor:pointer; padding:0 0 15px 0; display:flex; align-items:center; gap:4px;">← 返回群組列表</button>
-          <div class="card" style="flex-direction:column; align-items:stretch; margin-bottom:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
+          <div class="card" style="margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <div class="avatar-circle"><span id="group-detail-avatar" style="font-size:22px;">👥</span></div>
+              <div style="text-align:left;">
                 <p class="card-title" id="group-detail-name" style="font-size:18px;"></p>
                 <p class="card-subtitle" id="group-detail-count"></p>
               </div>
             </div>
-            <div style="border-top:1px solid #f2f2f2; margin-top:15px; padding-top:15px; text-align:left;">
-              <p style="font-size:12px; color:#999; margin:0 0 6px 0;">邀請碼（分享給朋友）</p>
-              <div style="display:flex; gap:8px;">
-                <input type="text" id="group-detail-invite-code" class="form-input" style="margin:0; text-align:center; font-weight:700; letter-spacing:2px;" readonly>
-                <button id="group-detail-copy-btn" class="secondary-btn" style="width:auto; padding:12px 16px; margin:0;">複製</button>
-              </div>
-            </div>
+            <button id="open-group-settings-btn" class="icon-btn" style="width:34px; height:34px; font-size:16px;" title="群組設定">⚙️</button>
           </div>
-          <p style="text-align:left; font-size:13px; color:#888; margin:0 0 10px 4px;">群組成員</p>
           <div id="group-detail-members" class="card-list"></div>
-          <button id="group-detail-leave-btn" class="secondary-btn" style="margin-top:20px; color:#ef4444; background-color:#fef2f2;">離開此群組</button>
         </div>
         <button id="open-groups-modal-btn" class="fab-btn">＋</button>
+      </div>
+
+      <div id="group-settings-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>⚙️ 群組設定</h3>
+            <button id="close-group-settings-modal-btn" class="close-modal-btn">✕</button>
+          </div>
+          <div class="input-section">
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:5px; text-align:left;">群組名稱</label>
+            <input type="text" id="group-settings-name" class="form-input" placeholder="群組名稱">
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:5px; text-align:left;">群組頭像 (Emoji)</label>
+            <input type="text" id="group-settings-avatar" class="form-input" placeholder="例如：🎉">
+            <button id="save-group-settings-btn" class="primary-btn" style="margin-bottom:24px;">儲存變更</button>
+
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:5px; text-align:left;">邀請碼（分享給朋友）</label>
+            <div style="display:flex; gap:8px; margin-bottom:24px;">
+              <input type="text" id="group-settings-invite-code" class="form-input" style="margin:0; text-align:center; font-weight:700; letter-spacing:2px;" readonly>
+              <button id="group-settings-copy-btn" class="secondary-btn" style="width:auto; padding:12px 16px; margin:0;">複製</button>
+            </div>
+
+            <button id="group-settings-leave-btn" class="secondary-btn" style="color:#ef4444; background-color:#fef2f2;">離開此群組</button>
+          </div>
+        </div>
       </div>
 
       <div id="birthday-view" class="view" style="display: none;">
@@ -472,7 +489,7 @@
         const inviteCode = generateInviteCode();
         const newGroupRef = doc(collection(db, "groups"));
         await setDoc(newGroupRef, {
-          name, inviteCode, ownerId: user.uid, memberIds: [user.uid], createdAt: new Date()
+          name, avatar: '👥', inviteCode, ownerId: user.uid, memberIds: [user.uid], createdAt: new Date()
         });
         await setDoc(doc(db, "users", user.uid), {
           groupIds: arrayUnion(newGroupRef.id)
@@ -618,9 +635,12 @@
         card.style.cursor = 'pointer';
         card.onclick = () => window.openGroupDetail(g.id);
         card.innerHTML = `
-          <div style="text-align:left;">
-            <p class="card-title" style="${isActive ? 'color:#f97316;' : ''}">${isActive ? '✅ ' : ''}${escapeHtml(g.name)}</p>
-            <div style="display:flex; align-items:center; margin-top:8px; padding-left:8px;">${avatarsHtml}${extraCount}</div>
+          <div style="display:flex; align-items:center; gap:15px;">
+            <div class="avatar-circle"><span style="font-size:22px;">${escapeHtml(g.avatar || '👥')}</span></div>
+            <div style="text-align:left;">
+              <p class="card-title" style="${isActive ? 'color:#f97316;' : ''}">${isActive ? '✅ ' : ''}${escapeHtml(g.name)}</p>
+              <div style="display:flex; align-items:center; margin-top:8px;">${avatarsHtml}${extraCount}</div>
+            </div>
           </div>
         `;
         list.appendChild(card);
@@ -661,35 +681,94 @@
 
       document.getElementById('group-detail-name').textContent = g.name;
       document.getElementById('group-detail-count').textContent = `成員 ${(g.memberIds || []).length} 人`;
-      document.getElementById('group-detail-invite-code').value = g.inviteCode;
+      document.getElementById('group-detail-avatar').textContent = g.avatar || '👥';
 
       const membersEl = document.getElementById('group-detail-members');
       const memberIds = g.memberIds || [];
-      membersEl.innerHTML = memberIds.map(uid => {
+      const myUid = auth.currentUser?.uid;
+
+      // 找出這個群組裡，生日最近的人（跟原本的生日倒數頁一樣的邏輯）
+      const withDays = memberIds.map(uid => {
         const u = window.globalUsers?.find(u => u.id === uid);
-        const isMe = uid === auth.currentUser?.uid;
+        const daysLeft = u?.birthday ? calculateDaysLeft(u.birthday) : 9999;
+        return { uid, u, daysLeft };
+      }).sort((a, b) => a.daysLeft - b.daysLeft);
+
+      let firstWithBirthday = true;
+      membersEl.innerHTML = withDays.map(({ uid, u, daysLeft }) => {
+        const isMe = uid === myUid;
+        const hasBirthday = !!u?.birthday;
+        const isClosest = hasBirthday && firstWithBirthday;
+        if (hasBirthday) firstWithBirthday = false;
+
+        const daysColor = isClosest ? '#f97316' : (daysLeft <= 7 ? '#e67e22' : '#333');
+        const daysText = hasBirthday ? (daysLeft === 0 ? '🎉 今天！' : `剩 ${daysLeft} 天`) : '';
+        const name = escapeHtml(u?.name || '（尚未設定資料）') + (isMe ? ' (你)' : '');
+        const displayName = isClosest ? `👑 ${name}` : name;
+
         return `
-          <div class="card" style="align-items:center;">
+          <div class="${isClosest ? 'card closest-birthday' : 'card'}">
             <div style="display:flex; align-items:center; gap:15px;">
               <div class="avatar-circle"><span style="font-size:22px;">${escapeHtml(u?.avatar || '😎')}</span></div>
               <div style="text-align:left;">
-                <p class="card-title">${escapeHtml(u?.name || '（尚未設定資料）')}${isMe ? ' (你)' : ''}</p>
-                ${u?.birthday ? `<p class="card-subtitle">${escapeHtml(u.birthday)}</p>` : ''}
+                <p class="card-title" style="${isClosest ? 'color:#f97316;' : ''}">${displayName}</p>
+                <p class="card-subtitle">${hasBirthday ? escapeHtml(u.birthday) : '尚未設定生日'}</p>
               </div>
             </div>
+            ${hasBirthday ? `<div class="countdown" style="color:${daysColor}; font-weight:700; font-size:${isClosest ? '22px' : '18px'};">${daysText}</div>` : ''}
           </div>
         `;
       }).join('');
     }
 
-    document.getElementById('group-detail-copy-btn')?.addEventListener('click', () => {
-      const code = document.getElementById('group-detail-invite-code').value;
+    // ===== 群組設定（改名、換頭像、看邀請碼、離開群組）=====
+    document.getElementById('open-group-settings-btn')?.addEventListener('click', () => {
+      const g = window.myGroups.find(gr => gr.id === window.viewingGroupId);
+      if (!g) return;
+      document.getElementById('group-settings-name').value = g.name;
+      document.getElementById('group-settings-avatar').value = g.avatar || '👥';
+      document.getElementById('group-settings-invite-code').value = g.inviteCode;
+      document.getElementById('group-settings-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    });
+
+    document.getElementById('close-group-settings-modal-btn')?.addEventListener('click', () => {
+      document.getElementById('group-settings-modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
+
+    document.getElementById('save-group-settings-btn')?.addEventListener('click', async () => {
+      const groupId = window.viewingGroupId;
+      if (!groupId) return;
+      const name = document.getElementById('group-settings-name').value.trim();
+      const avatar = document.getElementById('group-settings-avatar').value.trim();
+      if (!name) return showToast("群組名稱不能空白喔！");
+
+      const btn = document.getElementById('save-group-settings-btn');
+      btn.disabled = true; btn.textContent = "儲存中...";
+      try {
+        await setDoc(doc(db, "groups", groupId), { name, avatar: avatar || '👥' }, { merge: true });
+        await window.loadMyGroups();
+        showToast("群組設定已更新！", 'success');
+        document.getElementById('group-settings-modal').classList.remove('active');
+        document.body.classList.remove('modal-open');
+      } catch (e) {
+        showToast("儲存失敗：" + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "儲存變更";
+      }
+    });
+
+    document.getElementById('group-settings-copy-btn')?.addEventListener('click', () => {
+      const code = document.getElementById('group-settings-invite-code').value;
       navigator.clipboard.writeText(code);
       showToast("邀請碼已複製！");
     });
 
-    document.getElementById('group-detail-leave-btn')?.addEventListener('click', async () => {
+    document.getElementById('group-settings-leave-btn')?.addEventListener('click', async () => {
       await window.leaveCurrentGroup();
+      document.getElementById('group-settings-modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
       window.showGroupsList();
     });
 
