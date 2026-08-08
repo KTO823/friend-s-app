@@ -468,25 +468,13 @@ window.showBankAccounts = function(userId) {
 };
 
 // === 💸 結算中心專屬邏輯 ===
-window.renderDebts = function(debts, currentUserId) {
-  const list = document.getElementById('debt-list');
-  if (!list) return;
-  list.innerHTML = '';
 
-  if (!currentUserId) return;
-
-  // 計算我墊付的總額 (未結清的)
-  const myCredits = debts.filter(d => d.creditorId === currentUserId && !d.isSettled);
-  const totalCredit = myCredits.reduce((sum, d) => sum + d.amount, 0);
-  const creditEl = document.getElementById('my-credit-total');
-  if (creditEl) creditEl.textContent = totalCredit.toLocaleString();
-
+// 把一組欠款資料，依「對方是誰」分組、產生一張張卡片的 DOM 元素。
+// renderDebts（本群組結算頁）跟 renderDebtsOverview（全部欠款一覽表）共用這個函式，
+// 差別只在於傳進來的 debts 陣列範圍不同。
+function buildDebtGroupCards(debts, currentUserId) {
   const myRelatedDebts = debts.filter(d => d.creditorId === currentUserId || d.debtorId === currentUserId);
-
-  if (myRelatedDebts.length === 0) {
-    list.innerHTML = emptyStateHtml('💰', '目前沒有任何帳目', '幫朋友代購，或按右下角 + 記一筆帳，就會顯示在這裡。');
-    return;
-  }
+  if (myRelatedDebts.length === 0) return [];
 
   // 依「對方是誰、誰欠誰」分組，同一個人的帳目會集中在同一個格子裡
   const groups = {};
@@ -504,6 +492,8 @@ window.renderDebts = function(debts, currentUserId) {
     const bActive = b.items.some(d => !d.isSettled) ? 1 : 0;
     return bActive - aActive;
   });
+
+  const cards = [];
 
   groupList.forEach(group => {
     const { otherPersonId, isIOwe, items } = group;
@@ -594,9 +584,48 @@ window.renderDebts = function(debts, currentUserId) {
       ${settledHtml}
       ${bulkBtnHtml}
     `;
-    list.appendChild(card);
+    cards.push(card);
   });
+
+  return cards;
 }
+
+window.renderDebts = function(debts, currentUserId) {
+  const list = document.getElementById('debt-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!currentUserId) return;
+
+  // 計算我墊付的總額 (未結清的)
+  const myCredits = debts.filter(d => d.creditorId === currentUserId && !d.isSettled);
+  const totalCredit = myCredits.reduce((sum, d) => sum + d.amount, 0);
+  const creditEl = document.getElementById('my-credit-total');
+  if (creditEl) creditEl.textContent = totalCredit.toLocaleString();
+
+  const cards = buildDebtGroupCards(debts, currentUserId);
+  if (cards.length === 0) {
+    list.innerHTML = emptyStateHtml('💰', '目前沒有任何帳目', '幫朋友代購，或按右下角 + 記一筆帳，就會顯示在這裡。');
+    return;
+  }
+  cards.forEach(card => list.appendChild(card));
+};
+
+// 「全部欠款一覽表」：跟 renderDebts 邏輯一樣，只是資料來源是全部群組彙整、目標容器不同，
+// 而且不會動到本群組結算頁的「我的未收回代墊款」總額。
+window.renderDebtsOverview = function(debts, currentUserId) {
+  const list = document.getElementById('debts-overview-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!currentUserId) return;
+
+  const cards = buildDebtGroupCards(debts, currentUserId);
+  if (cards.length === 0) {
+    list.innerHTML = emptyStateHtml('🎉', '目前沒有任何欠款', '不管在哪個群組或好友之間，都沒有未完成的帳目！');
+    return;
+  }
+  cards.forEach(card => list.appendChild(card));
+};
 
 // 一次把某個人所有未結清帳目標記為已結清
 window.settleAllForPerson = async function(personId) {

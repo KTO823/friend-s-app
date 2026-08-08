@@ -210,9 +210,23 @@
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <h3 style="margin: 0; font-size: 15px; color: #2c2c2c;">📜 待結算明細</h3>
+            <button id="open-debts-overview-btn" style="background: #f5f5f5; border: none; color: #666; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">🌐 全部欠款一覽表</button>
           </div>
           <div id="debt-list" class="card-list"></div>
           <button id="open-debt-modal-btn" class="fab-btn">＋</button>
+        </div>
+      </div>
+
+      <div id="debts-overview-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 480px;">
+          <div class="modal-header">
+            <h3>🌐 全部欠款一覽表</h3>
+            <button id="close-debts-overview-btn" class="close-modal-btn">✕</button>
+          </div>
+          <p style="font-size: 12px; color: #999; text-align: left; margin: -10px 0 15px 0;">彙整你在所有群組／好友之間的欠款，不分是從哪裡產生的</p>
+          <div id="debts-overview-list" class="card-list" style="max-height: 62vh; overflow-y: auto; padding-right: 4px;">
+            <p style="text-align: center; color: #999;">正在載入資料...</p>
+          </div>
         </div>
       </div>
 
@@ -241,15 +255,6 @@
         <div id="profile-section" style="display: none; margin-top: 10px;">
           <p>目前登入：<span id="user-email"></span></p>
 
-          <div class="input-group" style="background: #fafafa; border: 1px solid #eee; border-radius: 12px; padding: 15px;">
-            <label style="font-weight: 600; color: #333; margin-bottom: 10px;">👥 目前群組</label>
-            <div id="current-group-info" style="margin-bottom: 10px;"></div>
-            <select id="group-switch-select" class="form-input" style="display: none; margin-bottom: 10px;"></select>
-            <div style="display: flex; gap: 8px;">
-              <button id="open-group-modal-btn" class="secondary-btn" style="margin: 0;">管理／切換群組</button>
-            </div>
-          </div>
-
           <div class="input-group">
             <label>自定義暱稱：</label>
             <input type="text" id="profile-name" placeholder="輸入你們之間的稱呼">
@@ -276,37 +281,44 @@
       <div id="group-modal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
-            <h3 id="group-modal-title">👥 管理群組</h3>
+            <h3 id="group-modal-title">👋 開始使用</h3>
             <button id="close-group-modal-btn" class="close-modal-btn">✕</button>
           </div>
-          <div id="group-modal-current-section" class="input-section" style="margin-bottom: 20px; display: none;">
-            <p style="font-size: 13px; color: #888; text-align: left; margin: 0 0 8px 0;">目前群組成員</p>
-            <div id="group-modal-members" style="text-align: left; margin-bottom: 12px;"></div>
-            <p style="font-size: 13px; color: #888; text-align: left; margin: 0 0 6px 0;">邀請碼（分享給朋友）</p>
-            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-              <input type="text" id="group-modal-invite-code" class="form-input" style="margin: 0; text-align: center; font-weight: 700; letter-spacing: 2px;" readonly>
-              <button id="copy-invite-code-btn" class="secondary-btn" style="width: auto; padding: 12px 16px; margin: 0;">複製</button>
-            </div>
-            <button id="leave-group-btn" class="secondary-btn" style="color: #ef4444; background-color: #fef2f2;">離開此群組</button>
+
+          <div id="group-modal-menu">
+            <button id="menu-add-friend-btn" class="secondary-btn" style="text-align:left; padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:12px;">
+              <span style="font-size:22px;">👤</span>
+              <span><span style="display:block; font-weight:600; color:#333;">加好友</span><span style="display:block; font-size:12px; color:#999; margin-top:2px;">一對一，直接看彼此的行程與帳目</span></span>
+            </button>
+            <button id="menu-join-group-btn" class="secondary-btn" style="text-align:left; padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:12px;">
+              <span style="font-size:22px;">🔑</span>
+              <span><span style="display:block; font-weight:600; color:#333;">用邀請碼加入</span><span style="display:block; font-size:12px; color:#999; margin-top:2px;">朋友給你一組邀請碼，輸入即可加入</span></span>
+            </button>
+            <button id="menu-create-group-btn" class="secondary-btn" style="text-align:left; padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:12px;">
+              <span style="font-size:22px;">👥</span>
+              <span><span style="display:block; font-weight:600; color:#333;">建立群組</span><span style="display:block; font-size:12px; color:#999; margin-top:2px;">多人共用，一起記行程、代購、分帳</span></span>
+            </button>
+            <button id="menu-migrate-legacy-btn" style="background:none; border:none; color:#aaa; font-size:12px; cursor:pointer; margin-top:8px; padding:6px;">📦 把升級前的舊資料搬進目前群組</button>
           </div>
 
-          <div class="input-section" style="text-align: left; border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px;">
-            <p style="font-size: 12px; color: #aaa; margin: 0 0 8px 0;">升級成群組版之前的舊資料（如果有的話），可以搬進目前這個群組：</p>
-            <button id="migrate-legacy-btn" class="secondary-btn">📦 把我的舊資料搬進目前群組</button>
+          <div id="group-modal-friend" style="display:none; text-align:left;">
+            <button class="group-modal-back-btn" style="background:none; border:none; color:#666; font-size:14px; cursor:pointer; padding:0 0 15px 0;">← 返回</button>
+            <p style="font-size:13px; color:#888; margin:0 0 15px 0;">按下面按鈕產生一組邀請碼，傳給朋友。對方輸入這組邀請碼後，就會正式成為好友，可以直接看彼此的行程、代購、結算。</p>
+            <button id="create-friend-btn" class="primary-btn">➕ 產生好友邀請碼</button>
           </div>
 
-          <div class="input-section" style="text-align: left;">
-            <p style="font-size: 13px; color: #888; margin: 0 0 8px 0;">建立新群組</p>
-            <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#555; margin-bottom:12px; cursor:pointer;">
-              <input type="checkbox" id="new-group-is-friend" style="width:18px; height:18px; margin:0;">
-              👤 這是一對一好友（不是多人群組）
-            </label>
-            <input type="text" id="new-group-name" class="form-input" placeholder="群組名稱 (例：好麻吉們)">
-            <button id="create-group-btn" class="primary-btn" style="margin-bottom: 20px;">建立新群組</button>
+          <div id="group-modal-join" style="display:none; text-align:left;">
+            <button class="group-modal-back-btn" style="background:none; border:none; color:#666; font-size:14px; cursor:pointer; padding:0 0 15px 0;">← 返回</button>
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:5px;">輸入朋友給你的邀請碼</label>
+            <input type="text" id="join-group-code" class="form-input" placeholder="例如：NVJ49T" style="text-transform: uppercase;">
+            <button id="join-group-btn" class="primary-btn">加入</button>
+          </div>
 
-            <p style="font-size: 13px; color: #888; margin: 0 0 8px 0;">用邀請碼加入其他群組／好友</p>
-            <input type="text" id="join-group-code" class="form-input" placeholder="輸入邀請碼" style="text-transform: uppercase;">
-            <button id="join-group-btn" class="secondary-btn">加入</button>
+          <div id="group-modal-create" style="display:none; text-align:left;">
+            <button class="group-modal-back-btn" style="background:none; border:none; color:#666; font-size:14px; cursor:pointer; padding:0 0 15px 0;">← 返回</button>
+            <label style="font-size:13px; color:#666; display:block; margin-bottom:5px;">群組名稱</label>
+            <input type="text" id="new-group-name" class="form-input" placeholder="例：好麻吉們">
+            <button id="create-group-btn" class="primary-btn">建立新群組</button>
           </div>
         </div>
       </div>
@@ -458,8 +470,6 @@
       } catch (e) { /* 不阻擋畫面更新 */ }
       subscribeToGroupData(groupId);
       renderGroupUI();
-      document.getElementById('group-modal-title').textContent = '👥 管理群組';
-      document.getElementById('close-group-modal-btn').style.display = 'block';
     };
 
     window.loadMyGroups = async function() {
@@ -478,16 +488,13 @@
       if (window.myGroups.length === 0) {
         // 還沒有任何群組：強制打開群組視窗，隱藏關閉按鈕，逼使用者先建立或加入
         window.activeGroupId = null;
-        document.getElementById('group-modal-title').textContent = '👥 歡迎！先建立或加入一個群組';
+        window.showGroupModalScreen('group-modal-menu');
         document.getElementById('close-group-modal-btn').style.display = 'none';
         document.getElementById('group-modal').classList.add('active');
         document.body.classList.add('modal-open');
         renderGroupUI();
         return;
       }
-
-      document.getElementById('group-modal-title').textContent = '👥 管理群組';
-      document.getElementById('close-group-modal-btn').style.display = 'block';
 
       let activeId = userData.activeGroupId;
       if (!activeId || !window.myGroups.find(g => g.id === activeId)) {
@@ -501,10 +508,8 @@
     window.createGroup = async function() {
       const user = auth.currentUser;
       if (!user) return showToast("請先登入！");
-      const isFriend = document.getElementById('new-group-is-friend').checked;
       const nameInput = document.getElementById('new-group-name');
-      let name = nameInput.value.trim();
-      if (!name && isFriend) name = '好友'; // 一對一好友不強制取名，畫面上會改顯示對方的名字
+      const name = nameInput.value.trim();
       if (!name) return showToast("請輸入群組名稱！");
 
       const btn = document.getElementById('create-group-btn');
@@ -514,28 +519,49 @@
         const newGroupRef = doc(collection(db, "groups"));
         await setDoc(newGroupRef, {
           name, avatar: '👥', inviteCode, ownerId: user.uid, memberIds: [user.uid],
-          type: isFriend ? 'friend' : 'group', createdAt: new Date()
+          type: 'group', createdAt: new Date()
         });
         await setDoc(doc(db, "users", user.uid), {
           groupIds: arrayUnion(newGroupRef.id)
         }, { merge: true });
 
         nameInput.value = '';
-        document.getElementById('new-group-is-friend').checked = false;
         await window.loadMyGroups();
         await window.switchActiveGroup(newGroupRef.id);
-        showToast(
-          isFriend
-            ? `已建立！把邀請碼 ${inviteCode} 傳給對方，等對方輸入就正式成為好友了`
-            : `群組「${name}」建立成功！`,
-          'success'
-        );
-        document.getElementById('group-modal')?.classList.remove('active');
-        document.body.classList.remove('modal-open');
+        showToast(`群組「${name}」建立成功！`, 'success');
+        window.closeGroupModal();
       } catch (e) {
         showToast("建立失敗：" + e.message);
       } finally {
         btn.disabled = false; btn.textContent = "建立新群組";
+      }
+    };
+
+    window.createFriendConnection = async function() {
+      const user = auth.currentUser;
+      if (!user) return showToast("請先登入！");
+
+      const btn = document.getElementById('create-friend-btn');
+      btn.disabled = true; btn.textContent = "建立中...";
+      try {
+        const inviteCode = generateInviteCode();
+        const newGroupRef = doc(collection(db, "groups"));
+        await setDoc(newGroupRef, {
+          name: '好友', avatar: '👥', inviteCode, ownerId: user.uid, memberIds: [user.uid],
+          type: 'friend', createdAt: new Date()
+        });
+        await setDoc(doc(db, "users", user.uid), {
+          groupIds: arrayUnion(newGroupRef.id)
+        }, { merge: true });
+
+        await window.loadMyGroups();
+        await window.switchActiveGroup(newGroupRef.id);
+        showToast(`已建立！把邀請碼 ${inviteCode} 傳給對方，等對方輸入就正式成為好友了`, 'success');
+        window.closeGroupModal();
+      } catch (e) {
+        showToast("建立失敗：" + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "➕ 產生好友邀請碼";
       }
     };
 
@@ -610,44 +636,6 @@
 
     // 更新設定頁 + 彈出視窗裡跟群組相關的畫面
     function renderGroupUI() {
-      const currentGroup = window.myGroups.find(g => g.id === window.activeGroupId);
-      const currentInfo = currentGroup ? getGroupDisplayInfo(currentGroup) : null;
-      const infoEl = document.getElementById('current-group-info');
-      const switchSelect = document.getElementById('group-switch-select');
-
-      if (infoEl) {
-        infoEl.innerHTML = currentInfo
-          ? `<p style="margin:0; font-size:16px; font-weight:600; color:#333;">${currentInfo.isFriend ? '👤 ' : ''}${escapeHtml(currentInfo.name)}</p><p style="margin:4px 0 0 0; font-size:12px; color:#999;">${currentInfo.isFriend ? '好友' : `成員 ${(currentGroup.memberIds || []).length} 人`}</p>`
-          : `<p style="margin:0; font-size:14px; color:#999;">尚未加入任何群組</p>`;
-      }
-
-      if (switchSelect) {
-        if (window.myGroups.length > 1) {
-          switchSelect.style.display = 'block';
-          switchSelect.innerHTML = window.myGroups.map(g => {
-            const info = getGroupDisplayInfo(g);
-            return `<option value="${g.id}" ${g.id === window.activeGroupId ? 'selected' : ''}>${info.isFriend ? '👤 ' : '👥 '}${escapeHtml(info.name)}</option>`;
-          }).join('');
-        } else {
-          switchSelect.style.display = 'none';
-        }
-      }
-
-      // 群組管理視窗內容
-      const currentSection = document.getElementById('group-modal-current-section');
-      if (currentGroup && currentSection) {
-        currentSection.style.display = 'block';
-        document.getElementById('group-modal-invite-code').value = currentGroup.inviteCode;
-        const membersEl = document.getElementById('group-modal-members');
-        const memberIds = currentGroup.memberIds || [];
-        membersEl.innerHTML = memberIds.map(uid => {
-          const u = window.globalUsers?.find(u => u.id === uid);
-          return `<span style="display:inline-block; background:#f0f0f0; border-radius:20px; padding:5px 12px; font-size:13px; margin:0 6px 6px 0;">${escapeHtml(u?.avatar || '😎')} ${escapeHtml(u?.name || '（尚未設定資料）')}</span>`;
-        }).join('');
-      } else if (currentSection) {
-        currentSection.style.display = 'none';
-      }
-
       window.renderGroupsList();
       if (window.viewingGroupId && typeof renderGroupDetailPage === 'function') renderGroupDetailPage();
     }
@@ -841,42 +829,55 @@
       window.showGroupsList();
     });
 
-    document.getElementById('open-group-modal-btn')?.addEventListener('click', () => {
-      renderGroupUI();
-      document.getElementById('group-modal-title').textContent = '👥 管理群組';
-      document.getElementById('close-group-modal-btn').style.display = 'block';
-      document.getElementById('group-modal').classList.add('active');
-      document.body.classList.add('modal-open');
+    // ===== 群組視窗的選單導覽（加好友／用邀請碼加入／建立群組 三選一）=====
+    const GROUP_MODAL_SCREENS = ['group-modal-menu', 'group-modal-friend', 'group-modal-join', 'group-modal-create'];
+
+    window.showGroupModalScreen = function(screenId) {
+      GROUP_MODAL_SCREENS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === screenId) ? 'block' : 'none';
+      });
+      const titles = {
+        'group-modal-menu': '👋 開始使用',
+        'group-modal-friend': '👤 加好友',
+        'group-modal-join': '🔑 用邀請碼加入',
+        'group-modal-create': '👥 建立群組'
+      };
+      document.getElementById('group-modal-title').textContent = titles[screenId] || '👋 開始使用';
+    };
+
+    window.closeGroupModal = function() {
+      document.getElementById('group-modal')?.classList.remove('active');
+      document.body.classList.remove('modal-open');
+    };
+
+    document.getElementById('menu-add-friend-btn')?.addEventListener('click', () => window.showGroupModalScreen('group-modal-friend'));
+    document.getElementById('menu-join-group-btn')?.addEventListener('click', () => window.showGroupModalScreen('group-modal-join'));
+    document.getElementById('menu-create-group-btn')?.addEventListener('click', () => window.showGroupModalScreen('group-modal-create'));
+    document.querySelectorAll('.group-modal-back-btn').forEach(btn => {
+      btn.addEventListener('click', () => window.showGroupModalScreen('group-modal-menu'));
     });
+    document.getElementById('create-friend-btn')?.addEventListener('click', () => window.createFriendConnection());
 
     document.getElementById('open-groups-modal-btn')?.addEventListener('click', () => {
-      renderGroupUI();
-      document.getElementById('group-modal-title').textContent = window.myGroups?.length ? '👥 管理群組' : '👥 建立或加入群組';
+      window.showGroupModalScreen('group-modal-menu');
       document.getElementById('close-group-modal-btn').style.display = window.myGroups?.length ? 'block' : 'none';
       document.getElementById('group-modal').classList.add('active');
       document.body.classList.add('modal-open');
     });
 
-    document.getElementById('close-group-modal-btn')?.addEventListener('click', () => {
-      document.getElementById('group-modal').classList.remove('active');
-      document.body.classList.remove('modal-open');
-    });
+    document.getElementById('close-group-modal-btn')?.addEventListener('click', window.closeGroupModal);
 
     document.getElementById('create-group-btn')?.addEventListener('click', () => window.createGroup());
     document.getElementById('join-group-btn')?.addEventListener('click', () => window.joinGroupByCode());
-    document.getElementById('leave-group-btn')?.addEventListener('click', () => window.leaveCurrentGroup());
-    document.getElementById('copy-invite-code-btn')?.addEventListener('click', () => {
-      const code = document.getElementById('group-modal-invite-code').value;
-      navigator.clipboard.writeText(code);
-      showToast("邀請碼已複製！");
-    });
 
     // 把「還沒有 groupId」的舊資料（升級群組版之前留下的）搬進目前的群組。
     // 只會處理「自己是擁有者/債主」的那些，其他人也各自登入按一次，資料就會全部歸位。
-    document.getElementById('migrate-legacy-btn')?.addEventListener('click', async () => {
+    document.getElementById('menu-migrate-legacy-btn')?.addEventListener('click', async () => {
       const user = auth.currentUser;
-      if (!user || !window.activeGroupId) return;
-      const btn = document.getElementById('migrate-legacy-btn');
+      if (!user) return;
+      if (!window.activeGroupId) return showToast("請先建立或加入一個群組，再來搬移舊資料！");
+      const btn = document.getElementById('menu-migrate-legacy-btn');
       btn.disabled = true; btn.textContent = "搬移中...";
 
       try {
@@ -901,7 +902,7 @@
       } catch (e) {
         showToast("搬移失敗：" + e.message);
       } finally {
-        btn.disabled = false; btn.textContent = "📦 把我的舊資料搬進目前群組";
+        btn.disabled = false; btn.textContent = "📦 把升級前的舊資料搬進目前群組";
       }
     });
     // ========== 群組功能結束 ==========
@@ -1192,10 +1193,17 @@
 
     // 訂閱「目前群組」的行程／代購資料（欠款不算在內，欠款是全域的，見下面 subscribeToMyDebts）。
     // 切換群組時會先取消上一組的訂閱，避免不同群組的資料混在一起顯示。
+    window.unsubscribeDebtsAsCreditor = null;
+    window.unsubscribeDebtsAsDebtor = null;
+    window._groupDebtsAsCreditor = [];
+    window._groupDebtsAsDebtor = [];
+
     function subscribeToGroupData(groupId) {
       if (window.unsubscribeTrips) window.unsubscribeTrips();
       if (window.unsubscribeGifts) window.unsubscribeGifts();
-      if (!groupId) { window.globalTrips = []; window.globalGifts = []; return; }
+      if (window.unsubscribeDebtsAsCreditor) window.unsubscribeDebtsAsCreditor();
+      if (window.unsubscribeDebtsAsDebtor) window.unsubscribeDebtsAsDebtor();
+      if (!groupId) { window.globalTrips = []; window.globalGifts = []; window.globalDebts = []; return; }
 
       window.unsubscribeTrips = onSnapshot(query(collection(db, "trips"), where("groupId", "==", groupId), orderBy("createdAt", "desc")), (snapshot) => {
         window.globalTrips = [];
@@ -1209,6 +1217,25 @@
         if (window.renderGifts) window.renderGifts(window.globalGifts, auth.currentUser?.uid);
         if (window.renderTrips) window.renderTrips(window.globalTrips, auth.currentUser?.uid);
       }, (err) => onLoadError("代購", err));
+
+      // 結算要限定在「這個群組」裡，不然在朋友面前打開結算，會看到其他群組不認識的人。
+      // Firestore 規則要求查詢條件要跟權限規則對得起來，所以拆成「我是債主」「我是欠款人」兩條各自查，
+      // 而不是單純用 groupId 撈全部。
+      const myUid = auth.currentUser?.uid;
+      function mergeAndRenderGroupDebts() {
+        window.globalDebts = [...window._groupDebtsAsCreditor, ...window._groupDebtsAsDebtor];
+        if (window.renderDebts) window.renderDebts(window.globalDebts, myUid);
+      }
+      window.unsubscribeDebtsAsCreditor = onSnapshot(query(collection(db, "debts"), where("groupId", "==", groupId), where("creditorId", "==", myUid), orderBy("createdAt", "desc")), (snapshot) => {
+        window._groupDebtsAsCreditor = [];
+        snapshot.forEach(doc => window._groupDebtsAsCreditor.push({ id: doc.id, ...doc.data() }));
+        mergeAndRenderGroupDebts();
+      }, (err) => onLoadError("結算", err));
+      window.unsubscribeDebtsAsDebtor = onSnapshot(query(collection(db, "debts"), where("groupId", "==", groupId), where("debtorId", "==", myUid), orderBy("createdAt", "desc")), (snapshot) => {
+        window._groupDebtsAsDebtor = [];
+        snapshot.forEach(doc => window._groupDebtsAsDebtor.push({ id: doc.id, ...doc.data() }));
+        mergeAndRenderGroupDebts();
+      }, (err) => onLoadError("結算", err));
     }
 
     // 資料讀取失敗時（例如 Firestore 索引還沒建好），直接跳提示，不要默默失敗讓人以為是 bug
@@ -1221,37 +1248,37 @@
       }
     }
 
-    window.unsubscribeMyDebtsAsCreditor = null;
-    window.unsubscribeMyDebtsAsDebtor = null;
-    window._debtsAsCreditor = [];
-    window._debtsAsDebtor = [];
+    // 「全部欠款一覽表」：不分群組，抓出所有跟自己有關的欠款。只有打開一覽表時才抓一次
+    // （不是即時監聽），因為這只是偶爾點開看一下的功能，沒必要一直佔用即時連線。
+    window.fetchAllMyDebts = async function() {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return [];
+      const [creditorSnap, debtorSnap] = await Promise.all([
+        getDocs(query(collection(db, "debts"), where("creditorId", "==", uid), orderBy("createdAt", "desc"))),
+        getDocs(query(collection(db, "debts"), where("debtorId", "==", uid), orderBy("createdAt", "desc")))
+      ]);
+      const result = [];
+      creditorSnap.forEach(doc => result.push({ id: doc.id, ...doc.data() }));
+      debtorSnap.forEach(doc => result.push({ id: doc.id, ...doc.data() }));
+      return result;
+    };
 
-    // 欠款不分群組，只要跟自己有關（不管是債主還是欠款人）就會抓進來，這樣同一個朋友
-    // 就算在不同群組裡都欠你錢，也會合併成一筆總帳顯示，而不是被群組拆散。
-    // 只需要在登入時訂閱一次，不需要跟著切換群組重新訂閱。
-    function subscribeToMyDebts(uid) {
-      if (window.unsubscribeMyDebtsAsCreditor) window.unsubscribeMyDebtsAsCreditor();
-      if (window.unsubscribeMyDebtsAsDebtor) window.unsubscribeMyDebtsAsDebtor();
-      if (!uid) { window.globalDebts = []; if (window.renderDebts) window.renderDebts([], null); return; }
-
-      function mergeAndRender() {
-        const merged = [...window._debtsAsCreditor, ...window._debtsAsDebtor];
-        window.globalDebts = merged;
-        if (window.renderDebts) window.renderDebts(window.globalDebts, auth.currentUser?.uid);
+    document.getElementById('open-debts-overview-btn')?.addEventListener('click', async () => {
+      document.getElementById('debts-overview-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+      document.getElementById('debts-overview-list').innerHTML = '<p style="text-align: center; color: #999;">正在載入資料...</p>';
+      try {
+        const allDebts = await window.fetchAllMyDebts();
+        window.renderDebtsOverview(allDebts, auth.currentUser?.uid);
+      } catch (e) {
+        document.getElementById('debts-overview-list').innerHTML = `<p style="text-align: center; color: #d9534f;">讀取失敗：${e.message}</p>`;
       }
+    });
 
-      window.unsubscribeMyDebtsAsCreditor = onSnapshot(query(collection(db, "debts"), where("creditorId", "==", uid), orderBy("createdAt", "desc")), (snapshot) => {
-        window._debtsAsCreditor = [];
-        snapshot.forEach(doc => window._debtsAsCreditor.push({ id: doc.id, ...doc.data() }));
-        mergeAndRender();
-      }, (err) => onLoadError("結算", err));
-
-      window.unsubscribeMyDebtsAsDebtor = onSnapshot(query(collection(db, "debts"), where("debtorId", "==", uid), orderBy("createdAt", "desc")), (snapshot) => {
-        window._debtsAsDebtor = [];
-        snapshot.forEach(doc => window._debtsAsDebtor.push({ id: doc.id, ...doc.data() }));
-        mergeAndRender();
-      }, (err) => onLoadError("結算", err));
-    }
+    document.getElementById('close-debts-overview-btn')?.addEventListener('click', () => {
+      document.getElementById('debts-overview-modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
 
     window.settleDebt = async function(debtId) {
       if (!(await showConfirm("確定這筆款項已經結清了嗎？"))) return;
@@ -1486,7 +1513,6 @@
         }
         window.loadBirthdays();
         window.loadMyGroups();
-        subscribeToMyDebts(user.uid);
       } else {
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('profile-section').style.display = 'none';
@@ -1507,7 +1533,6 @@
         window.activeGroupId = null;
         window.myGroups = [];
         subscribeToGroupData(null);
-        subscribeToMyDebts(null);
         if (window.renderTrips) window.renderTrips([], null);
         if (window.renderGifts) window.renderGifts([], null);
         if (window.renderDebts) window.renderDebts([], null);
