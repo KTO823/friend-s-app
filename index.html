@@ -659,28 +659,47 @@
         const info = getGroupDisplayInfo(g);
         const memberIds = g.memberIds || [];
 
-        let subRowHtml;
-        if (info.isFriend) {
-          subRowHtml = `<p class="card-subtitle" style="margin-top:6px;">好友</p>`;
-        } else {
-          const avatarsHtml = memberIds.slice(0, 5).map(uid => {
-            const u = window.globalUsers?.find(u => u.id === uid);
-            return `<div class="avatar-circle" style="width:28px; height:28px; min-width:28px; margin-left:-8px; border:2px solid #fff;"><span style="font-size:13px;">${escapeHtml(u?.avatar || '😎')}</span></div>`;
-          }).join('');
-          const extraCount = memberIds.length > 5 ? `<span style="font-size:12px; color:#999; margin-left:6px;">+${memberIds.length - 5}</span>` : '';
-          subRowHtml = `<div style="display:flex; align-items:center; margin-top:8px;">${avatarsHtml}${extraCount}</div>`;
-        }
-
         const card = document.createElement('div');
         card.className = isActive ? 'card closest-birthday' : 'card';
         card.style.cursor = 'pointer';
+        card.style.position = 'relative';
+
+        if (info.isFriend) {
+          // 好友卡片：點下去就是「切換到這位好友」，不再往下跳頁
+          card.onclick = () => window.selectFriend(g.id);
+          card.innerHTML = `
+            <div style="display:flex; align-items:center; gap:15px;">
+              <div class="avatar-circle"><span style="font-size:22px;">${escapeHtml(info.avatar)}</span></div>
+              <div style="text-align:left;">
+                <p class="card-title" style="${isActive ? 'color:#f97316;' : ''}">${isActive ? '✅ ' : ''}${escapeHtml(info.name)}</p>
+                <p class="card-subtitle" style="margin-top:6px;">好友</p>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="icon-btn remove-friend-btn" title="移除好友">🗑️</button>
+            </div>
+          `;
+          card.querySelector('.remove-friend-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.removeFriend(g.id);
+          });
+          return card;
+        }
+
+        // 群組卡片：維持原本點下去看成員列表的行為
+        const avatarsHtml = memberIds.slice(0, 5).map(uid => {
+          const u = window.globalUsers?.find(u => u.id === uid);
+          return `<div class="avatar-circle" style="width:28px; height:28px; min-width:28px; margin-left:-8px; border:2px solid #fff;"><span style="font-size:13px;">${escapeHtml(u?.avatar || '😎')}</span></div>`;
+        }).join('');
+        const extraCount = memberIds.length > 5 ? `<span style="font-size:12px; color:#999; margin-left:6px;">+${memberIds.length - 5}</span>` : '';
+
         card.onclick = () => window.openGroupDetail(g.id);
         card.innerHTML = `
           <div style="display:flex; align-items:center; gap:15px;">
             <div class="avatar-circle"><span style="font-size:22px;">${escapeHtml(info.avatar)}</span></div>
             <div style="text-align:left;">
               <p class="card-title" style="${isActive ? 'color:#f97316;' : ''}">${isActive ? '✅ ' : ''}${escapeHtml(info.name)}</p>
-              ${subRowHtml}
+              <div style="display:flex; align-items:center; margin-top:8px;">${avatarsHtml}${extraCount}</div>
             </div>
           </div>
         `;
@@ -714,6 +733,37 @@
       const g = window.myGroups.find(gr => gr.id === groupId);
       const info = g ? getGroupDisplayInfo(g) : null;
       document.getElementById('main-header-title').innerHTML = info ? `${info.isFriend ? '👤' : '👥'} ${escapeHtml(info.name)}` : '👥';
+    };
+
+    // 好友卡片點下去：只是「選擇/切換」到這位好友，停留在同一頁，不跳頁
+    window.selectFriend = async function(groupId) {
+      if (groupId !== window.activeGroupId) {
+        await window.switchActiveGroup(groupId);
+        const g = window.myGroups.find(gr => gr.id === groupId);
+        const info = g ? getGroupDisplayInfo(g) : null;
+        showToast(`已切換到跟 ${info?.name || '對方'} 的往來`, 'success');
+      }
+      window.renderGroupsList();
+    };
+
+    // 移除好友：直接在列表卡片上操作，不用先進任何頁面
+    window.removeFriend = async function(groupId) {
+      const user = auth.currentUser;
+      if (!user) return;
+      const group = window.myGroups.find(g => g.id === groupId);
+      if (!group) return;
+      const info = getGroupDisplayInfo(group);
+      if (window.myGroups.length === 1) return showToast("這是你唯一的好友/群組，移除前請先建立或加入另一個！");
+      if (!(await showConfirm(`確定要移除好友「${info.name}」嗎？移除後就看不到跟對方的行程與帳目了。`))) return;
+
+      try {
+        await setDoc(doc(db, "groups", groupId), { memberIds: arrayRemove(user.uid) }, { merge: true });
+        await setDoc(doc(db, "users", user.uid), { groupIds: arrayRemove(groupId) }, { merge: true });
+        await window.loadMyGroups();
+        showToast("已移除好友");
+      } catch (e) {
+        showToast("操作失敗：" + e.message);
+      }
     };
 
     // 返回群組列表頁
