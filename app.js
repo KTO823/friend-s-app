@@ -679,16 +679,37 @@ document.getElementById('open-debt-modal-btn')?.addEventListener('click', () => 
   const currentGroup = window.myGroups?.find(g => g.id === window.activeGroupId);
   const memberIds = currentGroup?.memberIds || [];
   const friends = (window.globalUsers?.filter(u => memberIds.includes(u.id) && u.id !== window.auth?.currentUser?.uid)) || [];
-  if(friends.length === 0) cbContainer.innerHTML = '<span style="font-size:13px; color:#999;">這個群組還沒有其他成員喔，先邀請朋友加入吧！</span>';
 
-  friends.forEach(f => {
-    cbContainer.innerHTML += `
-      <label style="display: block; margin-bottom: 8px; font-size: 15px; cursor: pointer;">
-        <input type="checkbox" class="debtor-cb" value="${f.id}" style="margin-right: 8px; transform: scale(1.2);">
-        ${escapeHtml(f.avatar || '😎')} ${escapeHtml(f.name)}
-      </label>
-    `;
-  });
+  const labelEl = document.getElementById('debtor-checkboxes-label');
+
+  if (currentGroup?.type === 'friend') {
+    // 好友只有對方一個人可能被記帳，不用給勾選清單，直接記給對方就好
+    if (labelEl) labelEl.style.display = 'none';
+    const f = friends[0];
+    if (f) {
+      cbContainer.innerHTML = `
+        <div style="font-size:14px; color:#333;">
+          💰 這筆帳會記給　<strong>${escapeHtml(f.avatar || '😎')} ${escapeHtml(f.name)}</strong>
+        </div>
+        <input type="checkbox" class="debtor-cb" value="${f.id}" checked style="display:none;">
+      `;
+    } else {
+      cbContainer.innerHTML = '<span style="font-size:13px; color:#999;">對方還沒設定過個人資料喔！</span>';
+    }
+  } else if (friends.length === 0) {
+    if (labelEl) labelEl.style.display = 'block';
+    cbContainer.innerHTML = '<span style="font-size:13px; color:#999;">這個群組還沒有其他成員喔，先邀請朋友加入吧！</span>';
+  } else {
+    if (labelEl) labelEl.style.display = 'block';
+    friends.forEach(f => {
+      cbContainer.innerHTML += `
+        <label style="display: block; margin-bottom: 8px; font-size: 15px; cursor: pointer;">
+          <input type="checkbox" class="debtor-cb" value="${f.id}" style="margin-right: 8px; transform: scale(1.2);">
+          ${escapeHtml(f.avatar || '😎')} ${escapeHtml(f.name)}
+        </label>
+      `;
+    });
+  }
 
   debtModal.classList.add('active');
   document.body.classList.add('modal-open');

@@ -73,7 +73,7 @@
         </div>
         <div id="group-detail-container" style="display: none;">
           <button id="back-to-groups-btn" style="background:none; border:none; color:#666; font-size:14px; cursor:pointer; padding:0 0 15px 0; display:flex; align-items:center; gap:4px;">← 返回群組列表</button>
-          <div class="card" style="margin-bottom:20px;">
+          <div class="card" style="margin-bottom:20px; position:relative;">
             <div style="display:flex; align-items:center; gap:15px;">
               <div class="avatar-circle"><span id="group-detail-avatar" style="font-size:22px;">👥</span></div>
               <div style="text-align:left;">
@@ -81,7 +81,10 @@
                 <p class="card-subtitle" id="group-detail-count"></p>
               </div>
             </div>
-            <button id="open-group-settings-btn" class="icon-btn" style="width:34px; height:34px; font-size:16px;" title="群組設定">⚙️</button>
+            <div id="group-detail-countdown" class="countdown" style="display:none;"></div>
+            <div class="card-actions">
+              <button id="open-group-settings-btn" class="icon-btn" title="群組設定">⚙️</button>
+            </div>
           </div>
           <div id="group-detail-members" class="card-list"></div>
         </div>
@@ -240,7 +243,7 @@
             <input type="text" id="debt-item" class="form-input" placeholder="項目 (例：環球影城門票)">
             <input type="number" id="debt-amount" class="form-input" placeholder="總金額 (NT$)">
             <input type="text" id="debt-link" class="form-input" placeholder="商品連結／照片連結 (選填)">
-            <label style="font-size: 13px; color: #777; margin-bottom: 8px; display: block; text-align: left;">誰需要給你錢？ (將自動平分)</label>
+            <label id="debtor-checkboxes-label" style="font-size: 13px; color: #777; margin-bottom: 8px; display: block; text-align: left;">誰需要給你錢？ (將自動平分)</label>
             <div id="debtor-checkboxes" style="text-align: left; margin-bottom: 15px; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #e6e6e6;">
               </div>
             <button id="add-debt-btn" class="primary-btn">記上一筆</button>
@@ -731,24 +734,47 @@
       if (!g) return;
 
       const info = getGroupDisplayInfo(g);
-      document.getElementById('group-detail-name').textContent = info.name;
-      document.getElementById('group-detail-avatar').textContent = info.avatar;
-      document.getElementById('group-detail-count').textContent = info.isFriend ? '好友' : `成員 ${(g.memberIds || []).length} 人`;
-
-      const membersEl = document.getElementById('group-detail-members');
       const myUid = auth.currentUser?.uid;
-      // 好友頁只看對方一個人的資料；一般群組才顯示完整成員列表（含自己）
-      const memberIds = info.isFriend ? (g.memberIds || []).filter(id => id !== myUid) : (g.memberIds || []);
+      document.getElementById('group-detail-avatar').textContent = info.avatar;
+      const countdownEl = document.getElementById('group-detail-countdown');
+      const membersEl = document.getElementById('group-detail-members');
 
-      // 找出要顯示的這些人裡，生日最近的人（跟原本的生日倒數頁一樣的邏輯）
-      // 好友頁固定只有一人，不需要皇冠強調樣式
+      if (info.isFriend) {
+        // 好友只有對方一個人，不需要再另外顯示一張一模一樣的成員卡，直接把生日倒數併進同一張卡
+        const otherUid = (g.memberIds || []).find(id => id !== myUid);
+        const u = window.globalUsers?.find(u => u.id === otherUid);
+        const hasBirthday = !!u?.birthday;
+        const daysLeft = hasBirthday ? calculateDaysLeft(u.birthday) : null;
+
+        document.getElementById('group-detail-name').textContent = info.name;
+        document.getElementById('group-detail-count').textContent = hasBirthday ? u.birthday : '尚未設定生日';
+
+        if (hasBirthday) {
+          countdownEl.style.display = 'block';
+          countdownEl.style.color = daysLeft <= 7 ? '#e67e22' : '#333';
+          countdownEl.textContent = daysLeft === 0 ? '🎉 今天！' : `剩 ${daysLeft} 天`;
+        } else {
+          countdownEl.style.display = 'none';
+        }
+        membersEl.innerHTML = '';
+        return;
+      }
+
+      // 一般群組：維持原本「群組摘要卡 + 完整成員列表」的樣子
+      countdownEl.style.display = 'none';
+      document.getElementById('group-detail-name').textContent = info.name;
+      document.getElementById('group-detail-count').textContent = `成員 ${(g.memberIds || []).length} 人`;
+
+      const memberIds = g.memberIds || [];
+
+      // 找出這些成員裡，生日最近的人（跟原本的生日倒數頁一樣的邏輯）
       const withDays = memberIds.map(uid => {
         const u = window.globalUsers?.find(u => u.id === uid);
         const daysLeft = u?.birthday ? calculateDaysLeft(u.birthday) : 9999;
         return { uid, u, daysLeft };
       }).sort((a, b) => a.daysLeft - b.daysLeft);
 
-      let firstWithBirthday = !info.isFriend; // 好友頁一律不用皇冠樣式
+      let firstWithBirthday = true;
       membersEl.innerHTML = withDays.map(({ uid, u, daysLeft }) => {
         const isMe = uid === myUid;
         const hasBirthday = !!u?.birthday;
