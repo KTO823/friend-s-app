@@ -30,7 +30,7 @@
       <div class="tutorial-slider" id="tutorial-slider" onscroll="updateTutorialDots()">
         <div class="tutorial-slide">
           <div style="font-size: 50px; margin-bottom: 10px;">✨</div>
-          <h2 style="margin:0 0 10px 0; color:#333;">歡迎使用買買買</h2>
+          <h2 style="margin:0 0 10px 0; color:#333;">歡迎使用卡戳</h2>
           <p style="color:#666; font-size:15px; line-height:1.6;">這是一個專為你們打造的專屬空間。<br>完美結合生日記錄、許願池與代購功能。<br><br><span style="color:#3b82f6; font-weight:bold;">向左滑動 👉 來看看怎麼用吧！</span></p>
         </div>
         <div class="tutorial-slide">
@@ -301,7 +301,6 @@
               <span style="font-size:22px;">👥</span>
               <span><span style="display:block; font-weight:600; color:#333;">建立群組</span><span style="display:block; font-size:12px; color:#999; margin-top:2px;">多人共用，一起記行程、代購、分帳</span></span>
             </button>
-            <button id="menu-migrate-legacy-btn" style="background:none; border:none; color:#aaa; font-size:12px; cursor:pointer; margin-top:8px; padding:6px;">📦 把升級前的舊資料搬進目前群組</button>
           </div>
 
           <div id="group-modal-friend" style="display:none; text-align:left;">
@@ -946,41 +945,6 @@
 
     document.getElementById('create-group-btn')?.addEventListener('click', () => window.createGroup());
     document.getElementById('join-group-btn')?.addEventListener('click', () => window.joinGroupByCode());
-
-    // 把「還沒有 groupId」的舊資料（升級群組版之前留下的）搬進目前的群組。
-    // 只會處理「自己是擁有者/債主」的那些，其他人也各自登入按一次，資料就會全部歸位。
-    document.getElementById('menu-migrate-legacy-btn')?.addEventListener('click', async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-      if (!window.activeGroupId) return showToast("請先建立或加入一個群組，再來搬移舊資料！");
-      const btn = document.getElementById('menu-migrate-legacy-btn');
-      btn.disabled = true; btn.textContent = "搬移中...";
-
-      try {
-        let count = 0;
-
-        const tripSnap = await getDocs(query(collection(db, "trips"), where("uid", "==", user.uid)));
-        for (const d of tripSnap.docs) {
-          if (!d.data().groupId) { await updateDoc(d.ref, { groupId: window.activeGroupId }); count++; }
-        }
-
-        const giftSnap = await getDocs(query(collection(db, "gifts"), where("uid", "==", user.uid)));
-        for (const d of giftSnap.docs) {
-          if (!d.data().groupId) { await updateDoc(d.ref, { groupId: window.activeGroupId }); count++; }
-        }
-
-        const debtSnap = await getDocs(query(collection(db, "debts"), where("creditorId", "==", user.uid)));
-        for (const d of debtSnap.docs) {
-          if (!d.data().groupId) { await updateDoc(d.ref, { groupId: window.activeGroupId }); count++; }
-        }
-
-        showToast(count > 0 ? `已搬移 ${count} 筆資料進來！` : "沒有找到需要搬移的舊資料", 'success');
-      } catch (e) {
-        showToast("搬移失敗：" + e.message);
-      } finally {
-        btn.disabled = false; btn.textContent = "📦 把升級前的舊資料搬進目前群組";
-      }
-    });
     // ========== 群組功能結束 ==========
 
     window.toggleExchangeOptions = function() {
