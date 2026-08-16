@@ -281,6 +281,21 @@
         </div>
       </div>
 
+      <div id="pending-invite-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 340px; text-align: center;">
+          <div class="modal-header">
+            <h3>⏳ 等待對方加入</h3>
+            <button id="close-pending-invite-modal-btn" class="close-modal-btn">✕</button>
+          </div>
+          <p style="font-size: 13px; color: #888; margin: 0 0 15px 0; text-align: left;">把這組邀請碼傳給朋友，對方輸入後就會正式成為好友</p>
+          <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+            <input type="text" id="pending-invite-code-display" class="form-input" style="margin: 0; text-align: center; font-weight: 700; letter-spacing: 2px;" readonly>
+            <button id="pending-invite-copy-btn" class="secondary-btn" style="width: auto; padding: 12px 16px; margin: 0;">複製</button>
+          </div>
+          <button id="pending-invite-remove-btn" class="secondary-btn" style="color: #ef4444; background-color: #fef2f2;">取消這個邀請</button>
+        </div>
+      </div>
+
       <div id="group-modal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
@@ -664,20 +679,39 @@
         card.style.position = 'relative';
 
         if (info.isFriend) {
-          // 好友卡片：點下去就是「切換到這位好友」，不再往下跳頁
-          card.onclick = () => window.selectFriend(g.id);
-          card.innerHTML = `
-            <div style="display:flex; align-items:center; gap:15px;">
-              <div class="avatar-circle"><span style="font-size:22px;">${escapeHtml(info.avatar)}</span></div>
-              <div style="text-align:left;">
-                <p class="card-title" style="${isActive ? 'color:#f97316;' : ''}">${isActive ? '✅ ' : ''}${escapeHtml(info.name)}</p>
-                <p class="card-subtitle" style="margin-top:6px;">好友</p>
+          const isPending = memberIds.length < 2;
+
+          if (isPending) {
+            // 對方還沒輸入邀請碼加入：點卡片是重新查看邀請碼，不是選擇對象
+            card.onclick = () => window.showPendingInviteCode(g.id);
+            card.innerHTML = `
+              <div style="display:flex; align-items:center; gap:15px;">
+                <div class="avatar-circle"><span style="font-size:22px;">⏳</span></div>
+                <div style="text-align:left;">
+                  <p class="card-title" style="color:#999;">好友邀請中</p>
+                  <p class="card-subtitle" style="margin-top:6px;">尚未加入・點擊查看邀請碼</p>
+                </div>
               </div>
-            </div>
-            <div class="card-actions">
-              <button class="icon-btn remove-friend-btn" title="移除好友">🗑️</button>
-            </div>
-          `;
+              <div class="card-actions">
+                <button class="icon-btn remove-friend-btn" title="取消邀請">🗑️</button>
+              </div>
+            `;
+          } else {
+            // 好友卡片：點下去就是「切換到這位好友」，不再往下跳頁
+            card.onclick = () => window.selectFriend(g.id);
+            card.innerHTML = `
+              <div style="display:flex; align-items:center; gap:15px;">
+                <div class="avatar-circle"><span style="font-size:22px;">${escapeHtml(info.avatar)}</span></div>
+                <div style="text-align:left;">
+                  <p class="card-title" style="${isActive ? 'color:#f97316;' : ''}">${isActive ? '✅ ' : ''}${escapeHtml(info.name)}</p>
+                  <p class="card-subtitle" style="margin-top:6px;">好友</p>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="icon-btn remove-friend-btn" title="移除好友">🗑️</button>
+              </div>
+            `;
+          }
           card.querySelector('.remove-friend-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             window.removeFriend(g.id);
@@ -752,18 +786,51 @@
       const group = window.myGroups.find(g => g.id === groupId);
       if (!group) return;
       const info = getGroupDisplayInfo(group);
+      const isPending = (group.memberIds || []).length < 2;
       if (window.myGroups.length === 1) return showToast("這是你唯一的好友/群組，移除前請先建立或加入另一個！");
-      if (!(await showConfirm(`確定要移除好友「${info.name}」嗎？移除後就看不到跟對方的行程與帳目了。`))) return;
+      const confirmMsg = isPending
+        ? "確定要取消這個好友邀請嗎？取消後這組邀請碼就失效了。"
+        : `確定要移除好友「${info.name}」嗎？移除後就看不到跟對方的行程與帳目了。`;
+      if (!(await showConfirm(confirmMsg))) return;
 
       try {
         await setDoc(doc(db, "groups", groupId), { memberIds: arrayRemove(user.uid) }, { merge: true });
         await setDoc(doc(db, "users", user.uid), { groupIds: arrayRemove(groupId) }, { merge: true });
         await window.loadMyGroups();
-        showToast("已移除好友");
+        showToast(isPending ? "已取消邀請" : "已移除好友");
       } catch (e) {
         showToast("操作失敗：" + e.message);
       }
     };
+
+    // 重新查看一個「還沒被接受」的好友邀請碼（避免當初 toast 一下就消失、來不及記下來）
+    window.showPendingInviteCode = function(groupId) {
+      const group = window.myGroups.find(g => g.id === groupId);
+      if (!group) return;
+      window._pendingInviteGroupId = groupId;
+      document.getElementById('pending-invite-code-display').value = group.inviteCode;
+      document.getElementById('pending-invite-modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    };
+
+    document.getElementById('close-pending-invite-modal-btn')?.addEventListener('click', () => {
+      document.getElementById('pending-invite-modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
+
+    document.getElementById('pending-invite-copy-btn')?.addEventListener('click', () => {
+      const code = document.getElementById('pending-invite-code-display').value;
+      navigator.clipboard.writeText(code);
+      showToast("邀請碼已複製！");
+    });
+
+    document.getElementById('pending-invite-remove-btn')?.addEventListener('click', async () => {
+      const groupId = window._pendingInviteGroupId;
+      if (!groupId) return;
+      await window.removeFriend(groupId);
+      document.getElementById('pending-invite-modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    });
 
     // 返回群組列表頁
     window.showGroupsList = function() {
